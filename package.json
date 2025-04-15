@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "lucide-react": "^0.487.0",
+    "react-media-recorder": "^1.7.1"
+  }
+}
