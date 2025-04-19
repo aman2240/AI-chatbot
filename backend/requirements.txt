@@ -7,3 +7,8 @@ langchain-core
 langchain-groq
 groq
 python-dotenv
+pymupdf 
+pytesseract 
+pdf2image
+poppler-utils
+tesseract-ocr
