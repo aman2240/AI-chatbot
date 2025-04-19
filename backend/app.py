@@ -15,10 +15,13 @@ from fastapi.staticfiles import StaticFiles
 import edge_tts
 import asyncio
 import uuid
-import fitz  # PyMuPDF
+import fitz
 from pdf2image import convert_from_path
 import pytesseract
 from PIL import Image
+import tempfile
+
+
 
 load_dotenv()
 
@@ -76,14 +79,20 @@ async def upload_pdf(
     file: UploadFile = File(...),
     user_id: str = Form(...),
     conversation_id: str = Form(...),
-    prompt: str = Form(...)
+    prompt: str = Form(...),
 ):
     try:
-        # Save PDF temporarily
+        # Save PDF temporarily in a cross-platform way
         contents = await file.read()
-        pdf_filename = f"/tmp/{uuid.uuid4()}.pdf"
+        temp_dir = tempfile.gettempdir()
+        pdf_filename = os.path.join(temp_dir, f"{uuid.uuid4()}.pdf")
         with open(pdf_filename, "wb") as f:
             f.write(contents)
+
+        # Debugging: Check if the file exists and path
+        print(f"PDF saved to: {pdf_filename}")
+        if not os.path.exists(pdf_filename):
+            raise HTTPException(status_code=400, detail="Failed to save PDF file.")
 
         # Extract text from PDF
         pdf_text = extract_text_from_pdf(pdf_filename)
@@ -91,56 +100,28 @@ async def upload_pdf(
         if not pdf_text.strip():
             raise HTTPException(status_code=400, detail="No text could be extracted from the PDF.")
 
-        # Create input message for Groq
-        initial_message = f"The user uploaded a PDF. Here is its content:\n\n{pdf_text}\n\nNow answer this: {prompt}"
-
-        # Continue session
-        session = await get_session(user_id, conversation_id)
-        if session:
-            messages = session["messages"]
-        else:
-            messages = [{"role": "system", "content": "You are a helpful assistant."}]
-
-        messages.append({"role": "user", "content": initial_message})
-        detected_language = detect(prompt)
-
-        response = query_groq(messages)
-        messages.append({"role": "assistant", "content": response})
-
-        await save_session(user_id, conversation_id, messages, detected_language)
-
-        audio_url = await generate_tts_audio(response, detected_language)
-
-        return {
-            "response": response,
-            "language": detected_language,
-            "audio_url": audio_url,
-            "conversation_id": conversation_id
-        }
+        # For simplicity, we'll return the extracted text
+        return {"extracted_text": pdf_text}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"PDF processing error: {str(e)}")
 
-
-
-
-# Try extracting text using PyMuPDF; fallback to OCR if needed
+# Extract text from PDF using PyMuPDF
 def extract_text_from_pdf(pdf_path: str) -> str:
-    doc = fitz.open(pdf_path)
-    full_text = ""
+    try:
+        doc = fitz.open(pdf_path)  # Open the PDF
+        full_text = ""
+        for i, page in enumerate(doc):
+            text = page.get_text("text")
+            if text.strip():
+                full_text += f"\n--- Page {i + 1} (Text) ---\n{text}"
+        return full_text
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        return ""
 
-    for i, page in enumerate(doc):
-        text = page.get_text()
-        if text.strip():
-            full_text += f"\n--- Page {i + 1} (Text) ---\n{text}"
-        else:
-            pix = page.get_pixmap()
-            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-            ocr_text = pytesseract.image_to_string(img)
-            full_text += f"\n--- Page {i + 1} (OCR) ---\n{ocr_text}"
-
-    return full_text
-
+# Run the FastAPI server using `uvicorn` in the terminal
+# uvicorn main:app --reload
 
 
 # Groq Query
@@ -262,3 +243,8 @@ async def image_search(
 async def text_to_speech(text: str, language: Optional[str] = "en"):
     audio_url = await generate_tts_audio(text, language)
     return {"audio_url": audio_url}
+
+
+@app.get("/")
+async def root():
+    return {"message": "HackHazards AI API is running 🚀"}
