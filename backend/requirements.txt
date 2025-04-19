@@ -11,4 +11,6 @@ pymupdf
 pytesseract 
 pdf2image
 poppler-utils
-tesseract-ocr
+langdetect
+edge_tts
+PyMuPDF
