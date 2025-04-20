@@ -26,7 +26,7 @@ class ErrorBoundary extends React.Component {
 }
 
 // MessageBubble Component
-const MessageBubble = ({ role, content, isTyping, audioUrl }) => {
+const MessageBubble = ({ role, content, isTyping, audioUrl, messageId, isPlaying, onToggleAudio }) => {
   const isUser = role === "user";
   return (
     <motion.div
@@ -78,14 +78,26 @@ const MessageBubble = ({ role, content, isTyping, audioUrl }) => {
               </div>
             </ErrorBoundary>
             {audioUrl && !isUser && (
-              <motion.audio
-                controls
-                src={`http://127.0.0.1:8000${audioUrl}`}
-                className="mt-2 w-full"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.4, delay: 0.2 }}
-              />
+              <motion.button
+                onClick={() => onToggleAudio(messageId, audioUrl)}
+                className={`mt-2 p-2 rounded-full ${
+                  isPlaying
+                    ? "bg-gradient-to-r from-red-600 to-pink-600"
+                    : "bg-gray-800/50 border border-indigo-500/30"
+                }`}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                transition={{ type: "spring", stiffness: 400 }}
+                aria-label={isPlaying ? "Stop audio" : "Play audio"}
+              >
+                <motion.span
+                  className="text-lg"
+                  animate={isPlaying ? { scale: [1, 1.2, 1] } : { scale: 1 }}
+                  transition={{ repeat: isPlaying ? Infinity : 0, duration: 1, ease: "easeInOut" }}
+                >
+                  🎙️
+                </motion.span>
+              </motion.button>
             )}
           </>
         )}
@@ -252,6 +264,8 @@ export default function Chat() {
   const [messages, setMessages] = useState(storedMessages ? JSON.parse(storedMessages) : []);
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
   const [isLoading, setIsLoading] = useState(false);
+  const [playingAudio, setPlayingAudio] = useState(null);
+  const [playingMessageId, setPlayingMessageId] = useState(null);
   const messagesEndRef = useRef(null);
   const userId = "user_123"; // Static for demo; replace with auth
 
@@ -264,7 +278,7 @@ export default function Chat() {
   } = useSpeechRecognition();
   const [isListening, setIsListening] = useState(false);
 
-  // Toggle mic
+  // Toggle mic for speech recognition
   const toggleListening = () => {
     if (isListening) {
       SpeechRecognition.stopListening();
@@ -286,6 +300,47 @@ export default function Chat() {
       SpeechRecognition.startListening({ continuous: true, language: "en-IN" });
       setIsListening(true);
       console.log("Started listening");
+    }
+  };
+
+  // Handle audio playback
+  const handleToggleAudio = (messageId, audioUrl) => {
+    if (playingMessageId === messageId && playingAudio) {
+      // Stop current audio
+      playingAudio.pause();
+      playingAudio.currentTime = 0;
+      setPlayingAudio(null);
+      setPlayingMessageId(null);
+      console.log("Stopped audio for message:", messageId);
+    } else {
+      // Stop any existing audio
+      if (playingAudio) {
+        playingAudio.pause();
+        playingAudio.currentTime = 0;
+      }
+      // Play new audio
+      const audio = new Audio(`http://127.0.0.1:8000${audioUrl}`);
+      audio.play().catch((err) => {
+        console.error("Audio playback error:", err);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: uuidv4(),
+            role: "assistant",
+            content: `Error: Failed to play audio. ${err.message}`,
+          },
+        ]);
+      });
+      setPlayingAudio(audio);
+      setPlayingMessageId(messageId);
+      console.log("Playing audio for message:", messageId, audioUrl);
+
+      // Reset when audio ends
+      audio.onended = () => {
+        setPlayingAudio(null);
+        setPlayingMessageId(null);
+        console.log("Audio ended for message:", messageId);
+      };
     }
   };
 
@@ -316,6 +371,12 @@ export default function Chat() {
     resetTranscript();
     setIsListening(false);
     SpeechRecognition.stopListening();
+    if (playingAudio) {
+      playingAudio.pause();
+      playingAudio.currentTime = 0;
+      setPlayingAudio(null);
+      setPlayingMessageId(null);
+    }
     console.log("Started new chat with conversationId:", newConversationId);
   };
 
@@ -358,7 +419,7 @@ export default function Chat() {
           user_id: userId,
         }, {
           headers: { "Content-Type": "application/json" },
-          timeout: 10000,
+          timeout: 30000, // Increased timeout for slow backend
         });
       }
 
@@ -548,6 +609,9 @@ export default function Chat() {
                 role={msg.role}
                 content={msg.content}
                 audioUrl={msg.audioUrl}
+                messageId={msg.id}
+                isPlaying={playingMessageId === msg.id}
+                onToggleAudio={handleToggleAudio}
               />
             ))}
             {isLoading && (
