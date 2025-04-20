@@ -21,8 +21,6 @@ import pytesseract
 from PIL import Image
 import tempfile
 
-
-
 load_dotenv()
 
 # Load env vars
@@ -59,6 +57,10 @@ class UserInput(BaseModel):
     conversation_id: str
     user_id: str
 
+class TextToSpeechRequest(BaseModel):
+    text: str
+    language: Optional[str] = "en"
+
 # Utils
 async def get_session(user_id: str, conversation_id: str):
     return in_memory_sessions.get(user_id, {}).get(conversation_id)
@@ -72,44 +74,10 @@ async def save_session(user_id: str, conversation_id: str, messages: List[Dict[s
         "updated_at": datetime.utcnow()
     }
 
-
-
-@app.post("/upload-pdf/")
-async def upload_pdf(
-    file: UploadFile = File(...),
-    user_id: str = Form(...),
-    conversation_id: str = Form(...),
-    prompt: str = Form(...),
-):
-    try:
-        # Save PDF temporarily in a cross-platform way
-        contents = await file.read()
-        temp_dir = tempfile.gettempdir()
-        pdf_filename = os.path.join(temp_dir, f"{uuid.uuid4()}.pdf")
-        with open(pdf_filename, "wb") as f:
-            f.write(contents)
-
-        # Debugging: Check if the file exists and path
-        print(f"PDF saved to: {pdf_filename}")
-        if not os.path.exists(pdf_filename):
-            raise HTTPException(status_code=400, detail="Failed to save PDF file.")
-
-        # Extract text from PDF
-        pdf_text = extract_text_from_pdf(pdf_filename)
-
-        if not pdf_text.strip():
-            raise HTTPException(status_code=400, detail="No text could be extracted from the PDF.")
-
-        # For simplicity, we'll return the extracted text
-        return {"extracted_text": pdf_text}
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"PDF processing error: {str(e)}")
-
 # Extract text from PDF using PyMuPDF
 def extract_text_from_pdf(pdf_path: str) -> str:
     try:
-        doc = fitz.open(pdf_path)  # Open the PDF
+        doc = fitz.open(pdf_path)
         full_text = ""
         for i, page in enumerate(doc):
             text = page.get_text("text")
@@ -119,10 +87,6 @@ def extract_text_from_pdf(pdf_path: str) -> str:
     except Exception as e:
         print(f"Error: {str(e)}")
         return ""
-
-# Run the FastAPI server using `uvicorn` in the terminal
-# uvicorn main:app --reload
-
 
 # Groq Query
 def query_groq(messages: List[Dict[str, str]]) -> str:
@@ -148,11 +112,44 @@ def query_groq(messages: List[Dict[str, str]]) -> str:
 async def generate_tts_audio(text: str, language: Optional[str] = "en") -> str:
     try:
         voice_map = {
-            "en": "en-US-AriaNeural",
-            "hi": "hi-IN-SwaraNeural",
-            "fr": "fr-FR-DeniseNeural",
-            "es": "es-ES-ElviraNeural"
-        }
+    "en": "en-US-AriaNeural",               # English (US) - Aria
+    "en-us": "en-US-AriaNeural",            # English (US) - Aria
+    "en-gb": "en-GB-LibbyNeural",           # English (UK) - Libby
+    "hi": "hi-IN-SwaraNeural",              # Hindi - Swara
+    "fr": "fr-FR-DeniseNeural",             # French - Denise
+    "de": "de-DE-KatjaNeural",              # German - Katja
+    "es": "es-ES-ElviraNeural",             # Spanish (Spain) - Elvira
+    "es-mx": "es-MX-DaliaNeural",           # Spanish (Mexico) - Dalia
+    "it": "it-IT-ElsaNeural",               # Italian - Elsa
+    "ja": "ja-JP-NanamiNeural",             # Japanese - Nanami
+    "ko": "ko-KR-SunHiNeural",              # Korean - SunHi
+    "zh": "zh-CN-XiaoxiaoNeural",           # Chinese (Simplified) - Xiaoxiao
+    "zh-cn": "zh-CN-XiaoxiaoNeural",        # Chinese (Simplified) - Xiaoxiao
+    "zh-hk": "zh-HK-HiuMaanNeural",         # Chinese (Cantonese) - HiuMaan
+    "zh-tw": "zh-TW-HsiaoChenNeural",       # Chinese (Taiwan) - HsiaoChen
+    "pt": "pt-BR-FranciscaNeural",          # Portuguese (Brazil) - Francisca
+    "pt-pt": "pt-PT-RaquelNeural",          # Portuguese (Portugal) - Raquel
+    "ru": "ru-RU-SvetlanaNeural",           # Russian - Svetlana
+    "tr": "tr-TR-EmelNeural",               # Turkish - Emel
+    "ar": "ar-EG-SalmaNeural",              # Arabic (Egypt) - Salma
+    "id": "id-ID-GadisNeural",              # Indonesian - Gadis
+    "th": "th-TH-PremwadeeNeural",          # Thai - Premwadee
+    "vi": "vi-VN-HoaiMyNeural",             # Vietnamese - HoaiMy
+    "nl": "nl-NL-FennaNeural",              # Dutch - Fenna
+    "pl": "pl-PL-ZofiaNeural",              # Polish - Zofia
+    "sv": "sv-SE-SofieNeural",              # Swedish - Sofie
+    "no": "nb-NO-IselinNeural",             # Norwegian - Iselin
+    "fi": "fi-FI-SelmaNeural",              # Finnish - Selma
+    "da": "da-DK-ChristelNeural",           # Danish - Christel
+    "he": "he-IL-HilaNeural",               # Hebrew - Hila
+    "cs": "cs-CZ-VlastaNeural",             # Czech - Vlasta
+    "el": "el-GR-AthinaNeural",             # Greek - Athina
+    "ro": "ro-RO-AlinaNeural",              # Romanian - Alina
+    "hu": "hu-HU-NoemiNeural",              # Hungarian - Noemi
+    "sk": "sk-SK-ViktoriaNeural",           # Slovak - Viktoria
+    "uk": "uk-UA-PolinaNeural",             # Ukrainian - Polina
+}
+
         voice = voice_map.get(language, "en-US-AriaNeural")
 
         filename = f"{uuid.uuid4()}.mp3"
@@ -164,6 +161,47 @@ async def generate_tts_audio(text: str, language: Optional[str] = "en") -> str:
         return f"/audio/{filename}"
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"TTS error: {str(e)}")
+
+# Upload PDF Endpoint
+@app.post("/upload-pdf/")
+async def upload_pdf(
+    file: UploadFile = File(...),
+    user_id: str = Form(...),
+    conversation_id: str = Form(...),
+    prompt: str = Form(...),
+):
+    try:
+        contents = await file.read()
+        temp_dir = tempfile.gettempdir()
+        pdf_filename = os.path.join(temp_dir, f"{uuid.uuid4()}.pdf")
+        with open(pdf_filename, "wb") as f:
+            f.write(contents)
+
+        if not os.path.exists(pdf_filename):
+            raise HTTPException(status_code=400, detail="Failed to save PDF file.")
+
+        pdf_text = extract_text_from_pdf(pdf_filename)
+
+        if not pdf_text.strip():
+            raise HTTPException(status_code=400, detail="No text could be extracted from the PDF.")
+
+        # Query Groq using document + user prompt
+        user_prompt = f"The user uploaded the following document.\n\nDocument content:\n{pdf_text}\n\nNow respond to this prompt:\n{prompt}"
+
+        messages = [
+            {"role": "system", "content": "You are a document analysis assistant."},
+            {"role": "user", "content": user_prompt},
+        ]
+
+        response = query_groq(messages)
+
+        return {
+    "response": response
+}
+
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"PDF processing error: {str(e)}")
 
 # Chat Endpoint
 @app.post("/chat/")
@@ -192,7 +230,7 @@ async def chat(input: UserInput):
         "conversation_id": input.conversation_id
     }
 
-# Image Search
+# Image Search Endpoint
 @app.post("/image-search/")
 async def image_search(
     file: UploadFile = File(...),
@@ -239,12 +277,44 @@ async def image_search(
         raise HTTPException(status_code=500, detail=f"Image processing or API error: {str(e)}")
 
 # Text-to-Speech (TTS) Endpoint
-@app.post("/text-to-speech/")
-async def text_to_speech(text: str, language: Optional[str] = "en"):
-    audio_url = await generate_tts_audio(text, language)
-    return {"audio_url": audio_url}
+class SpeakTranslatedRequest(BaseModel):
+    text: str
+    target_language: str  # ISO code like "en", "fr", etc.
 
+@app.post("/speak-translated/")
+async def speak_translated(request: SpeakTranslatedRequest):
+    try:
+        original_text = request.text.strip()
+        target_lang = request.target_language.lower()
 
-@app.get("/")
-async def root():
-    return {"message": "HackHazards AI API is running 🚀"}
+        if not original_text:
+            raise HTTPException(status_code=400, detail="Text cannot be empty")
+
+        # 1. Translate input text to target language using Groq
+        translation_prompt = [
+            {"role": "system", "content": "You are a translation assistant. Respond only with the translated text, no extra commentary."},
+            {"role": "user", "content": f"Translate the following text to {target_lang}:\n\n{original_text}"}
+        ]
+        translated_text = query_groq(translation_prompt).strip()
+
+        # 2. Generate TTS audio from the translated text
+        audio_path = await generate_tts_audio(translated_text, target_lang)
+        audio_url = f"http://127.0.0.1:8000{audio_path}"
+
+        # 3. Schedule cleanup of the audio file
+        async def cleanup():
+            await asyncio.sleep(300)
+            output_path = os.path.join(AUDIO_DIR, audio_path.split('/')[-1])
+            if os.path.exists(output_path):
+                os.remove(output_path)
+
+        asyncio.create_task(cleanup())
+
+        return {
+            "translated_text": translated_text,
+            "audio_url": audio_url,
+            "language": target_lang
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Speak-translated error: {str(e)}")
