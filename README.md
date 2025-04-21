@@ -1,4 +1,4 @@
-# 🚀 HackHazards AI API
+# 🚀 Multilingual Chatbot
 
 An advanced FastAPI backend that integrates:
 - 💬 **Conversational AI** using Groq's LLaMA models  
