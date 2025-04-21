@@ -39,7 +39,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://flourishing-profiterole-61e249.netlify.app",
+        "https://startling-bavarois-edfb33.netlify.app",
         "http://localhost:5173",
         "http://localhost:3000",
         "https://tranquil-douhua-be28ef.netlify.app"
