@@ -20,8 +20,13 @@ from pdf2image import convert_from_path
 import pytesseract
 from PIL import Image
 import tempfile
+import logging
 
 load_dotenv()
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Load env vars
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -35,8 +40,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://flourishing-profiterole-61e249.netlify.app",
-        "http://localhost:5173",  # Add for local testing
-        "http://localhost:3000"   # Optional for other local setups
+        "http://localhost:5173",
+        "http://localhost:3000"
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -93,7 +98,7 @@ def extract_text_from_pdf(pdf_path: str) -> str:
                 full_text += f"\n--- Page {i + 1} (Text) ---\n{text}"
         return full_text
     except Exception as e:
-        print(f"Error: {str(e)}")
+        logger.error(f"PDF extraction error: {str(e)}")
         return ""
 
 # Groq Query
@@ -114,51 +119,58 @@ def query_groq(messages: List[Dict[str, str]]) -> str:
                 response += delta.content
         return response
     except Exception as e:
+        logger.error(f"Groq API error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Groq API error: {str(e)}")
 
 # Generate TTS and return audio URL
 async def generate_tts_audio(text: str, language: Optional[str] = "en") -> str:
     try:
         voice_map = {
-            "en": "en-US-AriaNeural",               # English (US) - Aria
-            "en-us": "en-US-AriaNeural",            # English (US) - Aria
-            "en-gb": "en-GB-LibbyNeural",           # English (UK) - Libby
-            "hi": "hi-IN-SwaraNeural",              # Hindi - Swara
-            "fr": "fr-FR-DeniseNeural",             # French - Denise
-            "de": "de-DE-KatjaNeural",              # German - Katja
-            "es": "es-ES-ElviraNeural",             # Spanish (Spain) - Elvira
-            "es-mx": "es-MX-DaliaNeural",           # Spanish (Mexico) - Dalia
-            "it": "it-IT-ElsaNeural",               # Italian - Elsa
-            "ja": "ja-JP-NanamiNeural",             # Japanese - Nanami
-            "ko": "ko-KR-SunHiNeural",              # Korean - SunHi
-            "zh": "zh-CN-XiaoxiaoNeural",           # Chinese (Simplified) - Xiaoxiao
-            "zh-cn": "zh-CN-XiaoxiaoNeural",        # Chinese (Simplified) - Xiaoxiao
-            "zh-hk": "zh-HK-HiuMaanNeural",         # Chinese (Cantonese) - HiuMaan
-            "zh-tw": "zh-TW-HsiaoChenNeural",       # Chinese (Taiwan) - HsiaoChen
-            "pt": "pt-BR-FranciscaNeural",          # Portuguese (Brazil) - Francisca
-            "pt-pt": "pt-PT-RaquelNeural",          # Portuguese (Portugal) - Raquel
-            "ru": "ru-RU-SvetlanaNeural",           # Russian - Svetlana
-            "tr": "tr-TR-EmelNeural",               # Turkish - Emel
-            "ar": "ar-EG-SalmaNeural",              # Arabic (Egypt) - Salma
-            "id": "id-ID-GadisNeural",              # Indonesian - Gadis
-            "th": "th-TH-PremwadeeNeural",          # Thai - Premwadee
-            "vi": "vi-VN-HoaiMyNeural",             # Vietnamese - HoaiMy
-            "nl": "nl-NL-FennaNeural",              # Dutch - Fenna
-            "pl": "pl-PL-ZofiaNeural",              # Polish - Zofia
-            "sv": "sv-SE-SofieNeural",              # Swedish - Sofie
-            "no": "nb-NO-IselinNeural",             # Norwegian - Iselin
-            "fi": "fi-FI-SelmaNeural",              # Finnish - Selma
-            "da": "da-DK-ChristelNeural",           # Danish - Christel
-            "he": "he-IL-HilaNeural",               # Hebrew - Hila
-            "cs": "cs-CZ-VlastaNeural",             # Czech - Vlasta
-            "el": "el-GR-AthinaNeural",             # Greek - Athina
-            "ro": "ro-RO-AlinaNeural",              # Romanian - Alina
-            "hu": "hu-HU-NoemiNeural",              # Hungarian - Noemi
-            "sk": "sk-SK-ViktoriaNeural",           # Slovak - Viktoria
-            "uk": "uk-UA-PolinaNeural",             # Ukrainian - Polina
+            "en": "en-US-AriaNeural",
+            "en-us": "en-US-AriaNeural",
+            "en-gb": "en-GB-LibbyNeural",
+            "hi": "hi-IN-SwaraNeural",
+            "fr": "fr-FR-DeniseNeural",
+            "de": "de-DE-KatjaNeural",
+            "es": "es-ES-ElviraNeural",
+            "es-mx": "es-MX-DaliaNeural",
+            "it": "it-IT-ElsaNeural",
+            "ja": "ja-JP-NanamiNeural",
+            "ko": "ko-KR-SunHiNeural",
+            "zh": "zh-CN-XiaoxiaoNeural",
+            "zh-cn": "zh-CN-XiaoxiaoNeural",
+            "zh-hk": "zh-HK-HiuMaanNeural",
+            "zh-tw": "zh-TW-HsiaoChenNeural",
+            "pt": "pt-BR-FranciscaNeural",
+            "pt-pt": "pt-PT-RaquelNeural",
+            "ru": "ru-RU-SvetlanaNeural",
+            "tr": "tr-TR-EmelNeural",
+            "ar": "ar-EG-SalmaNeural",
+            "id": "id-ID-GadisNeural",
+            "th": "th-TH-PremwadeeNeural",
+            "vi": "vi-VN-HoaiMyNeural",
+            "nl": "nl-NL-FennaNeural",
+            "pl": "pl-PL-ZofiaNeural",
+            "sv": "sv-SE-SofieNeural",
+            "no": "nb-NO-IselinNeural",
+            "fi": "fi-FI-SelmaNeural",
+            "da": "da-DK-ChristelNeural",
+            "he": "he-IL-HilaNeural",
+            "cs": "cs-CZ-VlastaNeural",
+            "el": "el-GR-AthinaNeural",
+            "ro": "ro-RO-AlinaNeural",
+            "hu": "hu-HU-NoemiNeural",
+            "sk": "sk-SK-ViktoriaNeural",
+            "uk": "uk-UA-PolinaNeural",
         }
 
-        voice = voice_map.get(language, "en-US-AriaNeural")
+        # Validate language
+        if language not in voice_map:
+            logger.warning(f"Unsupported language: {language}. Supported languages: {list(voice_map.keys())}")
+            raise HTTPException(status_code=400, detail=f"Unsupported language: {language}. Supported languages: {list(voice_map.keys())}")
+
+        voice = voice_map[language]
+        logger.info(f"Generating TTS for language: {language}, voice: {voice}")
 
         filename = f"{uuid.uuid4()}.mp3"
         output_path = os.path.join(AUDIO_DIR, filename)
@@ -168,8 +180,12 @@ async def generate_tts_audio(text: str, language: Optional[str] = "en") -> str:
 
         # Use the production Render URL for audio files
         base_url = "https://ai-chatbot-qg4j.onrender.com"
-        return f"{base_url}/audio/{filename}"
+        audio_url = f"{base_url}/audio/{filename}"
+        logger.info(f"Generated audio URL: {audio_url}")
+
+        return audio_url
     except Exception as e:
+        logger.error(f"TTS error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"TTS error: {str(e)}")
 
 # Upload PDF Endpoint
@@ -210,6 +226,7 @@ async def upload_pdf(
         }
 
     except Exception as e:
+        logger.error(f"PDF processing error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"PDF processing error: {str(e)}")
 
 # Chat Endpoint
@@ -283,6 +300,7 @@ async def image_search(
         return {"response": response, "audio_url": audio_url}
 
     except Exception as e:
+        logger.error(f"Image processing error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Image processing or API error: {str(e)}")
 
 # Text-to-Speech (TTS) Endpoint
@@ -295,25 +313,72 @@ async def speak_translated(request: SpeakTranslatedRequest):
         if not original_text:
             raise HTTPException(status_code=400, detail="Text cannot be empty")
 
-        # 1. Translate input text to target language using Groq
+        logger.info(f"Processing /speak-translated/ with text: '{original_text}', target_language: '{target_lang}'")
+
+        # Validate target_language against voice_map
+        voice_map = {
+            "en": "en-US-AriaNeural",
+            "en-us": "en-US-AriaNeural",
+            "en-gb": "en-GB-LibbyNeural",
+            "hi": "hi-IN-SwaraNeural",
+            "fr": "fr-FR-DeniseNeural",
+            "de": "de-DE-KatjaNeural",
+            "es": "es-ES-ElviraNeural",
+            "es-mx": "es-MX-DaliaNeural",
+            "it": "it-IT-ElsaNeural",
+            "ja": "ja-JP-NanamiNeural",
+            "ko": "ko-KR-SunHiNeural",
+            "zh": "zh-CN-XiaoxiaoNeural",
+            "zh-cn": "zh-CN-XiaoxiaoNeural",
+            "zh-hk": "zh-HK-HiuMaanNeural",
+            "zh-tw": "zh-TW-HsiaoChenNeural",
+            "pt": "pt-BR-FranciscaNeural",
+            "pt-pt": "pt-PT-RaquelNeural",
+            "ru": "ru-RU-SvetlanaNeural",
+            "tr": "tr-TR-EmelNeural",
+            "ar": "ar-EG-SalmaNeural",
+            "id": "id-ID-GadisNeural",
+            "th": "th-TH-PremwadeeNeural",
+            "vi": "vi-VN-HoaiMyNeural",
+            "nl": "nl-NL-FennaNeural",
+            "pl": "pl-PL-ZofiaNeural",
+            "sv": "sv-SE-SofieNeural",
+            "no": "nb-NO-IselinNeural",
+            "fi": "fi-FI-SelmaNeural",
+            "da": "da-DK-ChristelNeural",
+            "he": "he-IL-HilaNeural",
+            "cs": "cs-CZ-VlastaNeural",
+            "el": "el-GR-AthinaNeural",
+            "ro": "ro-RO-AlinaNeural",
+            "hu": "hu-HU-NoemiNeural",
+            "sk": "sk-SK-ViktoriaNeural",
+            "uk": "uk-UA-PolinaNeural",
+        }
+        if target_lang not in voice_map:
+            logger.warning(f"Invalid target_language: {target_lang}. Supported languages: {list(voice_map.keys())}")
+            raise HTTPException(status_code=400, detail=f"Unsupported target_language: {target_lang}. Supported languages: {list(voice_map.keys())}")
+
+        # Translate input text to target language using Groq
         translation_prompt = [
             {"role": "system", "content": "You are a translation assistant. Respond only with the translated text, no extra commentary."},
             {"role": "user", "content": f"Translate the following text to {target_lang}:\n\n{original_text}"}
         ]
         translated_text = query_groq(translation_prompt).strip()
 
-        # 2. Generate TTS audio from the translated text
+        # Generate TTS audio from the translated text
         audio_url = await generate_tts_audio(translated_text, target_lang)
 
-        # 3. Schedule cleanup of the audio file
+        # Schedule cleanup of the audio file
         async def cleanup():
-            await asyncio.sleep(300)
+            await asyncio.sleep(600)  # Increased to 600s
             output_path = os.path.join(AUDIO_DIR, audio_url.split('/')[-1])
             if os.path.exists(output_path):
                 os.remove(output_path)
+                logger.info(f"Cleaned up audio file: {output_path}")
 
         asyncio.create_task(cleanup())
 
+        logger.info(f"Returning response: translated_text='{translated_text}', audio_url='{audio_url}', language='{target_lang}'")
         return {
             "translated_text": translated_text,
             "audio_url": audio_url,
@@ -321,4 +386,5 @@ async def speak_translated(request: SpeakTranslatedRequest):
         }
 
     except Exception as e:
+        logger.error(f"Speak-translated error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Speak-translated error: {str(e)}")
