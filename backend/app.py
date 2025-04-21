@@ -33,7 +33,11 @@ if not GROQ_API_KEY:
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://flourishing-profiterole-61e249.netlify.app"],
+    allow_origins=[
+        "https://flourishing-profiterole-61e249.netlify.app",
+        "http://localhost:5173",  # Add for local testing
+        "http://localhost:3000"   # Optional for other local setups
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -60,6 +64,10 @@ class UserInput(BaseModel):
 class TextToSpeechRequest(BaseModel):
     text: str
     language: Optional[str] = "en"
+
+class SpeakTranslatedRequest(BaseModel):
+    text: str
+    target_language: str  # ISO code like "en", "fr", etc.
 
 # Utils
 async def get_session(user_id: str, conversation_id: str):
@@ -112,43 +120,43 @@ def query_groq(messages: List[Dict[str, str]]) -> str:
 async def generate_tts_audio(text: str, language: Optional[str] = "en") -> str:
     try:
         voice_map = {
-    "en": "en-US-AriaNeural",               # English (US) - Aria
-    "en-us": "en-US-AriaNeural",            # English (US) - Aria
-    "en-gb": "en-GB-LibbyNeural",           # English (UK) - Libby
-    "hi": "hi-IN-SwaraNeural",              # Hindi - Swara
-    "fr": "fr-FR-DeniseNeural",             # French - Denise
-    "de": "de-DE-KatjaNeural",              # German - Katja
-    "es": "es-ES-ElviraNeural",             # Spanish (Spain) - Elvira
-    "es-mx": "es-MX-DaliaNeural",           # Spanish (Mexico) - Dalia
-    "it": "it-IT-ElsaNeural",               # Italian - Elsa
-    "ja": "ja-JP-NanamiNeural",             # Japanese - Nanami
-    "ko": "ko-KR-SunHiNeural",              # Korean - SunHi
-    "zh": "zh-CN-XiaoxiaoNeural",           # Chinese (Simplified) - Xiaoxiao
-    "zh-cn": "zh-CN-XiaoxiaoNeural",        # Chinese (Simplified) - Xiaoxiao
-    "zh-hk": "zh-HK-HiuMaanNeural",         # Chinese (Cantonese) - HiuMaan
-    "zh-tw": "zh-TW-HsiaoChenNeural",       # Chinese (Taiwan) - HsiaoChen
-    "pt": "pt-BR-FranciscaNeural",          # Portuguese (Brazil) - Francisca
-    "pt-pt": "pt-PT-RaquelNeural",          # Portuguese (Portugal) - Raquel
-    "ru": "ru-RU-SvetlanaNeural",           # Russian - Svetlana
-    "tr": "tr-TR-EmelNeural",               # Turkish - Emel
-    "ar": "ar-EG-SalmaNeural",              # Arabic (Egypt) - Salma
-    "id": "id-ID-GadisNeural",              # Indonesian - Gadis
-    "th": "th-TH-PremwadeeNeural",          # Thai - Premwadee
-    "vi": "vi-VN-HoaiMyNeural",             # Vietnamese - HoaiMy
-    "nl": "nl-NL-FennaNeural",              # Dutch - Fenna
-    "pl": "pl-PL-ZofiaNeural",              # Polish - Zofia
-    "sv": "sv-SE-SofieNeural",              # Swedish - Sofie
-    "no": "nb-NO-IselinNeural",             # Norwegian - Iselin
-    "fi": "fi-FI-SelmaNeural",              # Finnish - Selma
-    "da": "da-DK-ChristelNeural",           # Danish - Christel
-    "he": "he-IL-HilaNeural",               # Hebrew - Hila
-    "cs": "cs-CZ-VlastaNeural",             # Czech - Vlasta
-    "el": "el-GR-AthinaNeural",             # Greek - Athina
-    "ro": "ro-RO-AlinaNeural",              # Romanian - Alina
-    "hu": "hu-HU-NoemiNeural",              # Hungarian - Noemi
-    "sk": "sk-SK-ViktoriaNeural",           # Slovak - Viktoria
-    "uk": "uk-UA-PolinaNeural",             # Ukrainian - Polina
-}
+            "en": "en-US-AriaNeural",               # English (US) - Aria
+            "en-us": "en-US-AriaNeural",            # English (US) - Aria
+            "en-gb": "en-GB-LibbyNeural",           # English (UK) - Libby
+            "hi": "hi-IN-SwaraNeural",              # Hindi - Swara
+            "fr": "fr-FR-DeniseNeural",             # French - Denise
+            "de": "de-DE-KatjaNeural",              # German - Katja
+            "es": "es-ES-ElviraNeural",             # Spanish (Spain) - Elvira
+            "es-mx": "es-MX-DaliaNeural",           # Spanish (Mexico) - Dalia
+            "it": "it-IT-ElsaNeural",               # Italian - Elsa
+            "ja": "ja-JP-NanamiNeural",             # Japanese - Nanami
+            "ko": "ko-KR-SunHiNeural",              # Korean - SunHi
+            "zh": "zh-CN-XiaoxiaoNeural",           # Chinese (Simplified) - Xiaoxiao
+            "zh-cn": "zh-CN-XiaoxiaoNeural",        # Chinese (Simplified) - Xiaoxiao
+            "zh-hk": "zh-HK-HiuMaanNeural",         # Chinese (Cantonese) - HiuMaan
+            "zh-tw": "zh-TW-HsiaoChenNeural",       # Chinese (Taiwan) - HsiaoChen
+            "pt": "pt-BR-FranciscaNeural",          # Portuguese (Brazil) - Francisca
+            "pt-pt": "pt-PT-RaquelNeural",          # Portuguese (Portugal) - Raquel
+            "ru": "ru-RU-SvetlanaNeural",           # Russian - Svetlana
+            "tr": "tr-TR-EmelNeural",               # Turkish - Emel
+            "ar": "ar-EG-SalmaNeural",              # Arabic (Egypt) - Salma
+            "id": "id-ID-GadisNeural",              # Indonesian - Gadis
+            "th": "th-TH-PremwadeeNeural",          # Thai - Premwadee
+            "vi": "vi-VN-HoaiMyNeural",             # Vietnamese - HoaiMy
+            "nl": "nl-NL-FennaNeural",              # Dutch - Fenna
+            "pl": "pl-PL-ZofiaNeural",              # Polish - Zofia
+            "sv": "sv-SE-SofieNeural",              # Swedish - Sofie
+            "no": "nb-NO-IselinNeural",             # Norwegian - Iselin
+            "fi": "fi-FI-SelmaNeural",              # Finnish - Selma
+            "da": "da-DK-ChristelNeural",           # Danish - Christel
+            "he": "he-IL-HilaNeural",               # Hebrew - Hila
+            "cs": "cs-CZ-VlastaNeural",             # Czech - Vlasta
+            "el": "el-GR-AthinaNeural",             # Greek - Athina
+            "ro": "ro-RO-AlinaNeural",              # Romanian - Alina
+            "hu": "hu-HU-NoemiNeural",              # Hungarian - Noemi
+            "sk": "sk-SK-ViktoriaNeural",           # Slovak - Viktoria
+            "uk": "uk-UA-PolinaNeural",             # Ukrainian - Polina
+        }
 
         voice = voice_map.get(language, "en-US-AriaNeural")
 
@@ -158,7 +166,9 @@ async def generate_tts_audio(text: str, language: Optional[str] = "en") -> str:
         communicate = edge_tts.Communicate(text=text, voice=voice)
         await communicate.save(output_path)
 
-        return f"/audio/{filename}"
+        # Use the production Render URL for audio files
+        base_url = "https://ai-chatbot-qg4j.onrender.com"
+        return f"{base_url}/audio/{filename}"
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"TTS error: {str(e)}")
 
@@ -196,9 +206,8 @@ async def upload_pdf(
         response = query_groq(messages)
 
         return {
-    "response": response
-}
-
+            "response": response
+        }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"PDF processing error: {str(e)}")
@@ -277,10 +286,6 @@ async def image_search(
         raise HTTPException(status_code=500, detail=f"Image processing or API error: {str(e)}")
 
 # Text-to-Speech (TTS) Endpoint
-class SpeakTranslatedRequest(BaseModel):
-    text: str
-    target_language: str  # ISO code like "en", "fr", etc.
-
 @app.post("/speak-translated/")
 async def speak_translated(request: SpeakTranslatedRequest):
     try:
@@ -298,13 +303,12 @@ async def speak_translated(request: SpeakTranslatedRequest):
         translated_text = query_groq(translation_prompt).strip()
 
         # 2. Generate TTS audio from the translated text
-        audio_path = await generate_tts_audio(translated_text, target_lang)
-        audio_url = f"http://127.0.0.1:8000{audio_path}"
+        audio_url = await generate_tts_audio(translated_text, target_lang)
 
         # 3. Schedule cleanup of the audio file
         async def cleanup():
             await asyncio.sleep(300)
-            output_path = os.path.join(AUDIO_DIR, audio_path.split('/')[-1])
+            output_path = os.path.join(AUDIO_DIR, audio_url.split('/')[-1])
             if os.path.exists(output_path):
                 os.remove(output_path)
 
