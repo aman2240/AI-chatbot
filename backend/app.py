@@ -33,7 +33,7 @@ if not GROQ_API_KEY:
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://marvelous-rugelach-687740.netlify.app"],
+    allow_origins=["https://flourishing-profiterole-61e249.netlify.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
