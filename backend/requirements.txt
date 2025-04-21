@@ -14,3 +14,4 @@ poppler-utils
 langdetect
 edge_tts
 PyMuPDF
+python-multipart
