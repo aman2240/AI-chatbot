@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
 import { v4 as uuidv4 } from "uuid";
+import { BASE_URL } from "../constants/constants";
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component {
@@ -154,7 +155,7 @@ export default function UploadPDF() {
     console.log("Sending to backend:", { user_id: userId, conversation_id: conversationId, prompt, filename: file.name });
 
     try {
-      const response = await axios.post("http://127.0.0.1:8000/upload-pdf/", formData, {
+      const response = await axios.post(`${BASE_URL}/upload-pdf/`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
         timeout: 30000,
       });

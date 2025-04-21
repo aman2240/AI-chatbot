@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
 import { v4 as uuidv4 } from "uuid";
+import { BASE_URL } from "../constants/constants";
 import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
 
 // Error Boundary Component
@@ -319,7 +320,7 @@ export default function Chat() {
         playingAudio.currentTime = 0;
       }
       // Play new audio
-      const audio = new Audio(`http://127.0.0.1:8000${audioUrl}`);
+      const audio = new Audio(`${BASE_URL}${audioUrl}`);
       audio.play().catch((err) => {
         console.error("Audio playback error:", err);
         setMessages((prev) => [
@@ -407,19 +408,19 @@ export default function Chat() {
 
         console.log("FormData contents:", { file: image.name, message, user_id: userId, conversation_id: conversationId });
 
-        response = await axios.post("http://127.0.0.1:8000/image-search", formData, {
+        response = await axios.post(`${BASE_URL}/image-search`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
           timeout: 30000,
         });
       } else {
-        response = await axios.post("http://127.0.0.1:8000/chat", {
+        response = await axios.post(`${BASE_URL}/chat`, {
           message,
           role: "user",
           conversation_id: conversationId,
           user_id: userId,
         }, {
           headers: { "Content-Type": "application/json" },
-          timeout: 30000, // Increased timeout for slow backend
+          timeout: 30000,
         });
       }
 

@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
-import { debounce } from 'lodash';
+import { BASE_URL } from '../constants/constants';
 
 // Custom debounce hook
 const useDebounce = (value, delay) => {
@@ -116,7 +116,7 @@ export default function TextToAudio() {
     setError('');
     try {
       const payload = { text: inputText, target_language: language };
-      const endpoint = 'http://127.0.0.1:8000/speak-translated/';
+      const endpoint = `${BASE_URL}/speak-translated/`;
       console.log('Sending translation payload to', endpoint, ':', payload);
       const response = await axios.post(endpoint, payload, {
         headers: { 'Content-Type': 'application/json' },
@@ -152,7 +152,7 @@ export default function TextToAudio() {
     setError('');
     try {
       const payload = { text: translatedText, language };
-      const endpoint = 'http://127.0.0.1:8000/speak-translated/';
+      const endpoint = `${BASE_URL}/speak-translated/`;
       console.log('Sending audio conversion payload to', endpoint, ':', payload);
       const response = await axios.post(endpoint, payload, {
         headers: { 'Content-Type': 'application/json' },
