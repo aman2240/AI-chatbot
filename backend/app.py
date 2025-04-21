@@ -245,9 +245,9 @@ async def chat(input: UserInput):
     response = query_groq(messages)
     messages.append({"role": "assistant", "content": response})
 
+    # Always use English for TTS audio
     await save_session(input.user_id, input.conversation_id, messages, detected_language)
-
-    audio_url = await generate_tts_audio(response, detected_language)
+    audio_url = await generate_tts_audio(response, language="en")
 
     return {
         "response": response,
