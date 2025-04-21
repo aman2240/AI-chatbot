@@ -41,7 +41,8 @@ app.add_middleware(
     allow_origins=[
         "https://flourishing-profiterole-61e249.netlify.app",
         "http://localhost:5173",
-        "http://localhost:3000"
+        "http://localhost:3000",
+        "https://fancy-beignet-2fafa3.netlify.app/"
     ],
     allow_credentials=True,
     allow_methods=["*"],
