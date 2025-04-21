@@ -42,7 +42,7 @@ app.add_middleware(
         "https://flourishing-profiterole-61e249.netlify.app",
         "http://localhost:5173",
         "http://localhost:3000",
-        "https://fancy-beignet-2fafa3.netlify.app/"
+        "https://tranquil-douhua-be28ef.netlify.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],
