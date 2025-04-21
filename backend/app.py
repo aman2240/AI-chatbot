@@ -171,13 +171,20 @@ async def generate_tts_audio(text: str, language: Optional[str] = "en") -> str:
             raise HTTPException(status_code=400, detail=f"Unsupported language: {language}. Supported languages: {list(voice_map.keys())}")
 
         voice = voice_map[language]
-        logger.info(f"Generating TTS for language: {language}, voice: {voice}")
+        logger.info(f"Generating TTS for text: '{text[:50]}...', language: {language}, voice: {voice}")
 
         filename = f"{uuid.uuid4()}.mp3"
         output_path = os.path.join(AUDIO_DIR, filename)
 
         communicate = edge_tts.Communicate(text=text, voice=voice)
         await communicate.save(output_path)
+
+        # Verify file exists
+        if not os.path.exists(output_path):
+            logger.error(f"Audio file not created: {output_path}")
+            raise HTTPException(status_code=500, detail="Failed to create audio file")
+
+        logger.info(f"Audio file created: {output_path}, size: {os.path.getsize(output_path)} bytes")
 
         # Use the production Render URL for audio files
         base_url = "https://ai-chatbot-qg4j.onrender.com"
@@ -312,11 +319,10 @@ async def speak_translated(request: SpeakTranslatedRequest):
         target_lang = request.target_language.lower()
 
         if not original_text:
+            logger.error("Received empty text input")
             raise HTTPException(status_code=400, detail="Text cannot be empty")
 
-        logger.info(f"Processing /speak-translated/ with text: '{original_text}', target_language: '{target_lang}'")
-
-        # Validate target_language against voice_map
+        # Define voice map for validation
         voice_map = {
             "en": "en-US-AriaNeural",
             "en-us": "en-US-AriaNeural",
@@ -355,31 +361,57 @@ async def speak_translated(request: SpeakTranslatedRequest):
             "sk": "sk-SK-ViktoriaNeural",
             "uk": "uk-UA-PolinaNeural",
         }
+
+        # Validate target_language early
         if target_lang not in voice_map:
             logger.warning(f"Invalid target_language: {target_lang}. Supported languages: {list(voice_map.keys())}")
             raise HTTPException(status_code=400, detail=f"Unsupported target_language: {target_lang}. Supported languages: {list(voice_map.keys())}")
 
+        logger.info(f"Processing /speak-translated/ with text: '{original_text[:50]}...', target_language: '{target_lang}'")
+
         # Translate input text to target language using Groq
         translation_prompt = [
-            {"role": "system", "content": "You are a translation assistant. Respond only with the translated text, no extra commentary."},
-            {"role": "user", "content": f"Translate the following text to {target_lang}:\n\n{original_text}"}
+            {
+                "role": "system",
+                "content": "You are a translation assistant. Return ONLY the translated text in the target language, without any additional commentary, explanations, or extra text."
+            },
+            {
+                "role": "user",
+                "content": f"Translate the following text to {target_lang}:\n\n{original_text}"
+            }
         ]
         translated_text = query_groq(translation_prompt).strip()
+
+        if not translated_text:
+            logger.error("Translation returned empty text")
+            raise HTTPException(status_code=500, detail="Translation failed: No text returned")
+
+        logger.info(f"Translated text: '{translated_text[:50]}...'")
 
         # Generate TTS audio from the translated text
         audio_url = await generate_tts_audio(translated_text, target_lang)
 
+        # Verify audio file exists
+        output_path = os.path.join(AUDIO_DIR, audio_url.split('/')[-1])
+        if not os.path.exists(output_path):
+            logger.error(f"Audio file not found after generation: {output_path}")
+            raise HTTPException(status_code=500, detail="Failed to generate audio file")
+
         # Schedule cleanup of the audio file
         async def cleanup():
-            await asyncio.sleep(600)  # Increased to 600s
-            output_path = os.path.join(AUDIO_DIR, audio_url.split('/')[-1])
-            if os.path.exists(output_path):
-                os.remove(output_path)
-                logger.info(f"Cleaned up audio file: {output_path}")
+            try:
+                await asyncio.sleep(600)  # Wait 10 minutes
+                if os.path.exists(output_path):
+                    os.remove(output_path)
+                    logger.info(f"Cleaned up audio file: {output_path}")
+                else:
+                    logger.warning(f"Audio file not found for cleanup: {output_path}")
+            except Exception as e:
+                logger.error(f"Error during audio file cleanup: {str(e)}")
 
         asyncio.create_task(cleanup())
 
-        logger.info(f"Returning response: translated_text='{translated_text}', audio_url='{audio_url}', language='{target_lang}'")
+        logger.info(f"Returning response: translated_text='{translated_text[:50]}...', audio_url='{audio_url}', language='{target_lang}'")
         return {
             "translated_text": translated_text,
             "audio_url": audio_url,
