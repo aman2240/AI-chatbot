@@ -1,212 +1,363 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import axios from 'axios';
-import { v4 as uuidv4 } from 'uuid';
-import { BASE_URL } from '../constants/constants';
+import React, { useState, useMemo, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
+import axios from "axios";
+import ReactMarkdown from "react-markdown";
+import { v4 as uuidv4 } from "uuid";
+import { BASE_URL } from "../constants/constants";
 
-// Custom debounce hook
-const useDebounce = (value, delay) => {
-  const [debouncedValue, setDebouncedValue] = useState(value);
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-    return () => clearTimeout(handler);
-  }, [value, delay]);
-  return debouncedValue;
+// Supported languages for translation
+const SUPPORTED_LANGUAGES = [
+  { code: "en", name: "English" },
+  { code: "en-us", name: "English (US)" },
+  { code: "en-gb", name: "English (UK)" },
+  { code: "hi", name: "Hindi" },
+  { code: "fr", name: "French" },
+  { code: "de", name: "German" },
+  { code: "es", name: "Spanish" },
+  { code: "es-mx", name: "Spanish (Mexico)" },
+  { code: "ja", name: "Japanese" },
+  { code: "ko", name: "Korean" },
+  { code: "zh", name: "Chinese" },
+  { code: "zh-cn", name: "Chinese (China)" },
+  { code: "zh-hk", name: "Chinese (Hong Kong)" },
+  { code: "zh-tw", name: "Chinese (Taiwan)" },
+  { code: "pt", name: "Portuguese" },
+  { code: "pt-pt", name: "Portuguese (Portugal)" },
+  { code: "ru", name: "Russian" },
+  { code: "tr", name: "Turkish" },
+  { code: "ar", name: "Arabic" },
+  { code: "th", name: "Thai" },
+  { code: "vi", name: "Vietnamese" },
+  { code: "nl", name: "Dutch" },
+  { code: "pl", name: "Polish" },
+  { code: "sv", name: "Swedish" },
+  { code: "da", name: "Danish" },
+  { code: "cs", name: "Czech" },
+  { code: "el", name: "Greek" },
+  { code: "ro", name: "Romanian" },
+  { code: "hu", name: "Hungarian" },
+  { code: "sk", name: "Slovak" },
+  { code: "uk", name: "Ukrainian" },
+];
+
+// Error Boundary Component
+class ErrorBoundary extends React.Component {
+  state = { hasError: false };
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("ErrorBoundary caught:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <div className="text-red-500 p-4">Something went wrong. Please try again.</div>;
+    }
+    return this.props.children;
+  }
+}
+
+// MessageBubble Component
+const MessageBubble = ({ content, audioUrl, messageId, isPlaying, onToggleAudio }) => {
+  console.debug(`MessageBubble: messageId=${messageId}, audioUrl=${audioUrl}, isPlaying=${isPlaying}`);
+
+  return (
+    <motion.div
+      className="flex justify-start mb-4 items-start"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: "easeOut", type: "spring", stiffness: 120 }}
+    >
+      {audioUrl && (
+        <motion.button
+          onClick={() => onToggleAudio(messageId, audioUrl)}
+          className={`p-2 rounded-full mr-2 mt-3 ${
+            isPlaying
+              ? "bg-gradient-to-r from-red-600 to-pink-600"
+              : "bg-gray-800/50 border border-indigo-500/30"
+          }`}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          transition={{ type: "spring", stiffness: 400 }}
+          aria-label={isPlaying ? "Stop audio" : "Play audio"}
+        >
+          <motion.span
+            className="text-lg"
+            animate={isPlaying ? { scale: [1, 1.2, 1] } : { scale: 1 }}
+            transition={{ repeat: isPlaying ? Infinity : 0, duration: 1, ease: "easeInOut" }}
+          >
+            {isPlaying ? "⏸️" : "🎙️"}
+          </motion.span>
+        </motion.button>
+      )}
+      <div
+        className="max-w-[80%] sm:max-w-[60%] p-3 sm:p-4 rounded-xl shadow-md bg-white/10 backdrop-blur-lg border border-indigo-600/30 text-gray-100"
+      >
+        <ErrorBoundary>
+          <div className="text-sm sm:text-base markdown prose prose-invert">
+            <ReactMarkdown
+              components={{
+                code({ inline, className, children, ...props }) {
+                  return inline ? (
+                    <code className="bg-gray-700/50 px-1 rounded" {...props}>
+                      {children}
+                    </code>
+                  ) : (
+                    <pre className="bg-gray-700/50 p-3 rounded-lg overflow-auto">
+                      <code className={className} {...props}>
+                        {children}
+                      </code>
+                    </pre>
+                  );
+                },
+              }}
+            >
+              {content}
+            </ReactMarkdown>
+          </div>
+        </ErrorBoundary>
+      </div>
+    </motion.div>
+  );
 };
 
-export default function TextToAudio() {
-  const [text, setText] = useState('');
-  const [language, setLanguage] = useState('en');
-  const [audioUrl, setAudioUrl] = useState(null);
-  const [translatedText, setTranslatedText] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+// TranslationInput Component
+const TranslationInput = ({ onTranslate }) => {
+  const [translateText, setTranslateText] = useState("");
+  const [targetLanguage, setTargetLanguage] = useState("en");
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (translateText.trim()) {
+      await onTranslate(translateText, targetLanguage);
+      setTranslateText("");
+    }
+  };
+
+  return (
+    <motion.div
+      className="bg-white/10 backdrop-blur-lg border border-indigo-600/30 p-4 sm:p-6 rounded-lg mb-4"
+      initial={{ y: 50, opacity: 0 }}
+      animate={{ y: 0, opacity: 1, scale: focused ? 1.02 : 1 }}
+      transition={{ duration: 0.6, type: "spring", stiffness: 100 }}
+    >
+      <div className="flex flex-col gap-3">
+        <motion.input
+          type="text"
+          value={translateText}
+          onChange={(e) => setTranslateText(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          placeholder="Enter text to translate..."
+          className="p-3 rounded-lg bg-gray-800/50 text-gray-100 placeholder-gray-400 border border-indigo-500/30 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm sm:text-base"
+          aria-label="Translation input"
+          whileFocus={{ boxShadow: "0 0 10px rgba(139, 92, 246, 0.5)" }}
+          transition={{ duration: 0.3 }}
+        />
+        <div className="flex items-center gap-3">
+          <select
+            value={targetLanguage}
+            onChange={(e) => setTargetLanguage(e.target.value)}
+            className="p-3 rounded-lg bg-gray-800/50 text-gray-100 border border-indigo-500/30 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm sm:text-base"
+            aria-label="Select target language"
+          >
+            {SUPPORTED_LANGUAGES.map((lang) => (
+              <option key={lang.code} value={lang.code}>
+                {lang.name}
+              </option>
+            ))}
+          </select>
+          <motion.button
+            onClick={handleSubmit}
+            onHoverStart={() => setHovered(true)}
+            onHoverEnd={() => setHovered(false)}
+            className="relative px-4 py-3 bg-gradient-to-r from-indigo-600 to-blue-600 rounded-lg text-white font-semibold text-sm sm:text-base shadow-lg overflow-hidden"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 400 }}
+            aria-label="Translate"
+            disabled={!translateText.trim()}
+          >
+            <span className="relative z-10">Translate</span>
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-blue-500 opacity-0"
+              animate={{ opacity: hovered ? 1 : 0 }}
+              transition={{ duration: 0.3 }}
+            />
+          </motion.button>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+// Main Component
+export default function Translator() {
+  // Initialize translations from localStorage or empty array
+  const storedTranslations = localStorage.getItem("translations");
+  const [translations, setTranslations] = useState(() => {
+    try {
+      return storedTranslations ? JSON.parse(storedTranslations) : [];
+    } catch (error) {
+      console.error("Failed to parse translations from localStorage:", error);
+      return [];
+    }
+  });
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
-  const [isPageLoaded, setIsPageLoaded] = useState(false);
-  const [conversationId, setConversationId] = useState(localStorage.getItem('conversationId') || uuidv4());
+  const [isLoading, setIsLoading] = useState(false);
+  const [playingAudio, setPlayingAudio] = useState(null);
+  const [playingMessageId, setPlayingMessageId] = useState(null);
+  const translationsEndRef = useRef(null);
 
-  // Debounce text input for 2 seconds
-  const debouncedText = useDebounce(text, 2000);
-
-  // Language options
-  const languageOptions = [
-    { value: 'en', label: 'English (US, Aria)' },
-    { value: 'en-gb', label: 'English (UK, Libby)' },
-    { value: 'hi', label: 'Hindi (Swara)' },
-    { value: 'fr', label: 'French (Denise)' },
-    { value: 'de', label: 'German (Katja)' },
-    { value: 'es', label: 'Spanish (Spain, Elvira)' },
-    { value: 'es-mx', label: 'Spanish (Mexico, Dalia)' },
-    { value: 'it', label: 'Italian (Elsa)' },
-    { value: 'ja', label: 'Japanese (Nanami)' },
-    { value: 'ko', label: 'Korean (SunHi)' },
-    { value: 'zh', label: 'Chinese (Simplified, Xiaoxiao)' },
-    { value: 'zh-hk', label: 'Chinese (Cantonese, HiuMaan)' },
-    { value: 'zh-tw', label: 'Chinese (Taiwan, HsiaoChen)' },
-    { value: 'pt', label: 'Portuguese (Brazil, Francisca)' },
-    { value: 'pt-pt', label: 'Portuguese (Portugal, Raquel)' },
-    { value: 'ru', label: 'Russian (Svetlana)' },
-    { value: 'tr', label: 'Turkish (Emel)' },
-    { value: 'ar', label: 'Arabic (Egypt, Salma)' },
-    { value: 'id', label: 'Indonesian (Gadis)' },
-    { value: 'th', label: 'Thai (Premwadee)' },
-    { value: 'vi', label: 'Vietnamese (HoaiMy)' },
-    { value: 'nl', label: 'Dutch (Fenna)' },
-    { value: 'pl', label: 'Polish (Zofia)' },
-    { value: 'sv', label: 'Swedish (Sofie)' },
-    { value: 'no', label: 'Norwegian (Iselin)' },
-    { value: 'fi', label: 'Finnish (Selma)' },
-    { value: 'da', label: 'Danish (Christel)' },
-    { value: 'he', label: 'Hebrew (Hila)' },
-    { value: 'cs', label: 'Czech (Vlasta)' },
-    { value: 'el', label: 'Greek (Athina)' },
-    { value: 'ro', label: 'Romanian (Alina)' },
-    { value: 'hu', label: 'Hungarian (Noemi)' },
-    { value: 'sk', label: 'Slovak (Viktoria)' },
-    { value: 'uk', label: 'Ukrainian (Polina)' },
-  ];
-
-  // Initialize from localStorage
+  // Save translations to localStorage
   useEffect(() => {
-    const storedText = localStorage.getItem(`text_${conversationId}`);
-    const storedAudioUrl = localStorage.getItem(`audioUrl_${conversationId}`);
-    const storedLanguage = localStorage.getItem(`language_${conversationId}`);
-    const storedTranslatedText = localStorage.getItem(`translatedText_${conversationId}`);
-    if (storedText && storedAudioUrl) {
-      setText(storedText);
-      setAudioUrl(storedAudioUrl);
-      setLanguage(storedLanguage || 'en');
-      setTranslatedText(storedTranslatedText || '');
-      console.log('Loaded from localStorage:', { conversationId, text: storedText, audioUrl: storedAudioUrl, language: storedLanguage, translatedText: storedTranslatedText });
+    try {
+      localStorage.setItem("translations", JSON.stringify(translations));
+      console.log("Saved translations to localStorage:", translations);
+    } catch (error) {
+      console.error("Failed to save translations to localStorage:", error);
     }
-    localStorage.setItem('conversationId', conversationId);
-    setIsPageLoaded(true);
-  }, [conversationId]);
+  }, [translations]);
 
-  // Save to localStorage
-  useEffect(() => {
-    if (text || translatedText || audioUrl || language) {
-      localStorage.setItem(`text_${conversationId}`, text);
-      localStorage.setItem(`audioUrl_${conversationId}`, audioUrl || '');
-      localStorage.setItem(`language_${conversationId}`, language);
-      localStorage.setItem(`translatedText_${conversationId}`, translatedText);
-      console.log('Saved to localStorage:', { conversationId, text, audioUrl, language, translatedText });
+  // Handle translation
+  const handleTranslate = async (text, targetLanguage) => {
+    console.log("Sending to /speak-translated/:", { text, target_language: targetLanguage });
+    setIsLoading(true);
+
+    try {
+      const response = await axios.post(`${BASE_URL}/speak-translated/`, {
+        text,
+        target_language: targetLanguage,
+      }, {
+        headers: { "Content-Type": "application/json" },
+        timeout: 30000,
+      });
+
+      console.log("Translation response:", response.data);
+
+      const newTranslation = {
+        id: uuidv4(),
+        content: `Translated to ${SUPPORTED_LANGUAGES.find(lang => lang.code === targetLanguage).name}: ${response.data.translated_text}`,
+        audioUrl: response.data.audio_url,
+      };
+
+      setTranslations((prev) => [...prev, newTranslation]);
+
+      // Auto-play the translation audio
+      const audio = new Audio(response.data.audio_url);
+      audio.play().catch((err) => {
+        console.error("Translation audio playback error:", err);
+        setTranslations((prev) => [
+          ...prev,
+          {
+            id: uuidv4(),
+            content: `Error: Failed to play translation audio. ${err.message}`,
+          },
+        ]);
+      });
+      setPlayingAudio(audio);
+      setPlayingMessageId(newTranslation.id);
+      audio.onended = () => {
+        setPlayingAudio(null);
+        setPlayingMessageId(null);
+        console.log("Translation audio ended");
+      };
+    } catch (error) {
+      console.error("Translation API error:", error.message, error.response?.data);
+      let errorMessage = "Failed to translate text.";
+      if (error.response?.data?.detail) {
+        errorMessage = typeof error.response.data.detail === "string"
+          ? error.response.data.detail
+          : JSON.stringify(error.response.data.detail, null, 2);
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      setTranslations((prev) => [
+        ...prev,
+        {
+          id: uuidv4(),
+          content: `Error: ${errorMessage}`,
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
     }
-  }, [text, audioUrl, language, translatedText, conversationId]);
+  };
+
+  // Handle audio playback
+  const handleToggleAudio = (messageId, audioUrl) => {
+    console.log(`Toggling audio: messageId=${messageId}, audioUrl=${audioUrl}`);
+    if (playingMessageId === messageId && playingAudio) {
+      // Stop current audio
+      playingAudio.pause();
+      playingAudio.currentTime = 0;
+      setPlayingAudio(null);
+      setPlayingMessageId(null);
+      console.log("Stopped audio for message:", messageId);
+    } else {
+      // Stop any existing audio
+      if (playingAudio) {
+        playingAudio.pause();
+        playingAudio.currentTime = 0;
+      }
+      // Play new audio
+      const audio = new Audio(audioUrl);
+      audio.play().catch((err) => {
+        console.error("Audio playback error:", err);
+        setTranslations((prev) => [
+          ...prev,
+          {
+            id: uuidv4(),
+            content: `Error: Failed to play audio. ${err.message}`,
+          },
+        ]);
+      });
+      setPlayingAudio(audio);
+      setPlayingMessageId(messageId);
+      console.log("Playing audio for message:", messageId);
+
+      // Reset when audio ends
+      audio.onended = () => {
+        setPlayingAudio(null);
+        setPlayingMessageId(null);
+        console.log("Audio ended for message:", messageId);
+      };
+    }
+  };
+
+  // Handle clearing translations
+  const handleClearTranslations = () => {
+    console.log("Clearing translations");
+    localStorage.removeItem("translations");
+    setTranslations([]);
+    if (playingAudio) {
+      playingAudio.pause();
+      playingAudio.currentTime = 0;
+      setPlayingAudio(null);
+      setPlayingMessageId(null);
+    }
+    console.log("Cleared translations");
+  };
+
+  // Scroll to bottom on new translations
+  useEffect(() => {
+    translationsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    console.log("Translations state updated:", translations);
+  }, [translations, isLoading]);
 
   // Memoize particle data
-  const particles = useMemo(() => [...Array(15)].map(() => ({
+  const particles = useMemo(() => [...Array(10)].map(() => ({
     size: Math.random() * 5 + 2,
     left: `${Math.random() * 100}%`,
     top: `${Math.random() * 100}%`,
     color: `rgba(${Math.random() > 0.5 ? '139, 92, 246' : '59, 130, 246'}, ${Math.random() * 0.3 + 0.2})`,
     duration: Math.random() * 10 + 6,
   })), []);
-
-  // Handle translation
-  const handleTranslate = async (inputText) => {
-    if (!inputText.trim() || inputText.length < 5) {
-      setError('Please enter at least 5 characters of text.');
-      setTranslatedText('');
-      return;
-    }
-    setIsLoading(true);
-    setError('');
-    try {
-      const payload = { text: inputText, target_language: language };
-      const endpoint = `${BASE_URL}/speak-translated/`;
-      console.log('Sending translation payload to', endpoint, ':', payload);
-      const response = await axios.post(endpoint, payload, {
-        headers: { 'Content-Type': 'application/json' },
-        timeout: 30000,
-      });
-      console.log('Translation response:', response.data);
-      setTranslatedText(response.data.translated_text || '');
-    } catch (err) {
-      console.error('Translation error:', err);
-      let errorMessage = 'Failed to translate text.';
-      if (err.response?.data?.detail) {
-        errorMessage = typeof err.response.data.detail === 'string'
-          ? err.response.data.detail
-          : JSON.stringify(err.response.data.detail, null, 2);
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
-      setError(`Error: ${errorMessage}`);
-      setTranslatedText('');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Handle audio conversion
-  const handleConvert = async () => {
-    if (!translatedText.trim() || translatedText.length < 5) {
-      setError('Translated text must be at least 5 characters.');
-      setAudioUrl(null);
-      return;
-    }
-    setIsLoading(true);
-    setError('');
-    try {
-      const payload = { text: translatedText, language };
-      const endpoint = `${BASE_URL}/speak-translated/`;
-      console.log('Sending audio conversion payload to', endpoint, ':', payload);
-      const response = await axios.post(endpoint, payload, {
-        headers: { 'Content-Type': 'application/json' },
-        timeout: 30000,
-      });
-      console.log('Audio conversion response:', response.data);
-      setAudioUrl(response.data.audio_url);
-    } catch (err) {
-      console.error('Audio conversion error:', err);
-      let errorMessage = 'Failed to convert translated text to audio.';
-      if (err.response?.data?.detail) {
-        errorMessage = typeof err.response.data.detail === 'string'
-          ? err.response.data.detail
-          : JSON.stringify(err.response.data.detail, null, 2);
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
-      setError(`Error: ${errorMessage}`);
-      setAudioUrl(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Auto-translate on debounced text or language change
-  useEffect(() => {
-    if (debouncedText) {
-      handleTranslate(debouncedText);
-    } else {
-      setTranslatedText('');
-      setError('');
-    }
-  }, [debouncedText, language]);
-
-  // Handle clear chat
-  const handleClearChat = () => {
-    if (window.confirm('Are you sure you want to clear the chat and audio data?')) {
-      console.log('Clearing chat:', { conversationId });
-      localStorage.removeItem(`text_${conversationId}`);
-      localStorage.removeItem(`audioUrl_${conversationId}`);
-      localStorage.removeItem(`language_${conversationId}`);
-      localStorage.removeItem(`translatedText_${conversationId}`);
-      localStorage.removeItem(`messages_${conversationId}`);
-      localStorage.removeItem('conversationId');
-      const newConversationId = uuidv4();
-      setConversationId(newConversationId);
-      setText('');
-      setLanguage('en');
-      setAudioUrl(null);
-      setTranslatedText('');
-      setError('');
-      console.log('Started new chat with conversationId:', newConversationId);
-    }
-  };
 
   // Cursor trail effect
   const handleMouseMove = (e) => {
@@ -215,97 +366,71 @@ export default function TextToAudio() {
 
   return (
     <motion.div
-      className="min-h-screen bg-gradient-to-br from-gray-950 via-indigo-900 to-gray-900 text-white flex flex-col items-center p-4 sm:p-6 relative overflow-hidden"
+      className="flex flex-col min-h-screen bg-gradient-to-br from-gray-950 via-indigo-900 to-gray-900 text-white relative overflow-hidden"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.6, ease: [0.6, -0.05, 0.01, 0.99] }}
       onMouseMove={handleMouseMove}
     >
-      {/* Loading Screen */}
-      {!isPageLoaded && (
-        <motion.div
-          className="absolute inset-0 flex items-center justify-center z-20"
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.8 }}
-          transition={{ duration: 0.6, ease: [0.6, -0.05, 0.01, 0.99] }}
-        >
-          <motion.h1
-            className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-blue-400"
-            animate={{ scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] }}
-            transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
-          >
-            Team Nested Minds
-          </motion.h1>
-        </motion.div>
-      )}
-
-      {/* Main Content */}
+      {/* Cursor Trail Effect */}
       <motion.div
-        className="w-full max-w-4xl flex flex-col items-center"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: isPageLoaded ? 1 : 0 }}
-        transition={{ duration: 1.2, delay: 0.2, ease: [0.6, -0.05, 0.01, 0.99] }}
-      >
-        {/* Cursor Trail Effect */}
+        className="absolute w-4 h-4 rounded-full bg-indigo-400/30 pointer-events-none"
+        style={{ x: cursorPos.x - 8, y: cursorPos.y - 8 }}
+        animate={{ scale: [1, 1.5, 0], opacity: [0.5, 0.2, 0] }}
+        transition={{ duration: 0.5, repeat: Infinity, ease: "easeOut" }}
+      />
+
+      {/* Particle Background */}
+      {particles.map((particle, i) => (
         <motion.div
-          className="absolute w-4 h-4 rounded-full bg-indigo-400/30 pointer-events-none"
-          style={{ x: cursorPos.x - 8, y: cursorPos.y - 8 }}
-          animate={{ scale: [1, 1.5, 0], opacity: [0.5, 0.2, 0] }}
-          transition={{ duration: 0.6, repeat: Infinity, ease: 'easeOut' }}
+          key={i}
+          className="absolute rounded-full pointer-events-none"
+          style={{
+            width: particle.size,
+            height: particle.size,
+            left: particle.left,
+            top: particle.top,
+            background: particle.color,
+          }}
+          initial={{ y: 0, opacity: 0 }}
+          animate={{
+            y: [0, -100, -200],
+            opacity: [0, 0.6, 0],
+            x: Math.random() > 0.5 ? [0, 20, 40] : [0, -20, -40],
+            scale: [1, 1.2, 0.8],
+          }}
+          transition={{
+            duration: particle.duration,
+            repeat: Infinity,
+            ease: "linear",
+            delay: Math.random() * 3,
+          }}
         />
+      ))}
 
-        {/* Particle Background */}
-        {particles.map((particle, i) => (
-          <motion.div
-            key={i}
-            className="absolute rounded-full pointer-events-none"
-            style={{
-              width: particle.size,
-              height: particle.size,
-              left: particle.left,
-              top: particle.top,
-              background: particle.color,
-            }}
-            initial={{ y: 0, opacity: 0 }}
-            animate={{
-              y: [0, -150, -300],
-              opacity: [0, 0.7, 0],
-              x: Math.random() > 0.5 ? [0, 30, 60] : [0, -30, -60],
-              scale: [1, 1.3, 0.7],
-            }}
-            transition={{
-              duration: particle.duration,
-              repeat: Infinity,
-              ease: 'linear',
-              delay: Math.random() * 4,
-            }}
-          />
-        ))}
-
-        {/* Header */}
-        <motion.h2
-          className="text-4xl sm:text-5xl font-extrabold mb-8 text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-blue-400"
-          initial={{ opacity: 0, y: -30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.4, type: 'spring', stiffness: 120 }}
-        >
-          Text to Audio
-        </motion.h2>
-
-        {/* Clear Chat Button */}
+      {/* Translation Area */}
+      <motion.div
+        className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-transparent relative z-10 pb-20 sm:pb-24"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.8, delay: 0.2 }}
+      >
+        {/* Clear Translations Button */}
         <motion.div
-          className="w-full flex justify-end mb-4"
+          className="flex justify-end mb-4"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4, type: 'spring', stiffness: 100 }}
+          transition={{ duration: 0.6, delay: 0.4, type: "spring", stiffness: 100 }}
         >
           <motion.button
-            onClick={handleClearChat}
+            onClick={handleClearTranslations}
             className="relative px-4 py-2 bg-white/10 backdrop-blur-lg border border-indigo-500/30 rounded-lg text-gray-100 font-semibold text-sm sm:text-base shadow-lg overflow-hidden"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            transition={{ type: 'spring', stiffness: 400 }}
-            aria-label="Clear chat"
+            transition={{ type: "spring", stiffness: 400 }}
+            aria-label="Clear translations"
           >
-            <span className="relative z-10">Clear Chat</span>
+            <span className="relative z-10">Clear Translations</span>
             <motion.div
               className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-blue-500 opacity-0"
               animate={{ opacity: 0 }}
@@ -315,168 +440,84 @@ export default function TextToAudio() {
           </motion.button>
         </motion.div>
 
-        {/* Input Area */}
-        <motion.div
-          className="w-full bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-indigo-600/30 shadow-xl mb-8"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
-          whileHover={{ scale: 1.02, boxShadow: '0 10px 20px rgba(0, 0, 0, 0.3)' }}
-        >
-          <div className="flex flex-col items-center justify-center text-center">
-            <motion.div
-              className="text-3xl mb-4"
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
-            >
-              🎙️
-            </motion.div>
-            <p className="text-gray-300 mb-4">
-              Enter text to translate and convert to audio
-            </p>
-            <motion.textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="e.g., Enter text to translate and hear as audio"
-              className="w-full max-w-md p-3 rounded-lg bg-gray-800/50 text-gray-100 placeholder-gray-400 border border-indigo-500/30 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm sm:text-base resize-y"
-              rows="5"
-              whileFocus={{ boxShadow: '0 0 10px rgba(139, 92, 246, 0.5)' }}
-              transition={{ duration: 0.3 }}
-              title="Enter text for translation and audio conversion"
-              disabled={isLoading}
-            />
-            <div className="relative w-full max-w-md mt-4">
-              <motion.select
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-                className="w-full p-2 rounded-lg bg-gray-800/50 text-gray-100 border border-indigo-500/30 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm sm:text-base appearance-none"
-                disabled={isLoading}
-                whileFocus={{ boxShadow: '0 0 10px rgba(139, 92, 246, 0.5)' }}
-                transition={{ duration: 0.3 }}
-              >
-                {languageOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </motion.select>
-              {isLoading && (
-                <motion.div
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 flex space-x-1"
-                  animate={{ opacity: [0.4, 1, 0.4] }}
-                  transition={{ repeat: Infinity, duration: 1.2 }}
-                >
-                  <div className="w-1 h-1 bg-indigo-400 rounded-full"></div>
-                  <div className="w-1 h-1 bg-indigo-400 rounded-full"></div>
-                  <div className="w-1 h-1 bg-indigo-400 rounded-full"></div>
-                </motion.div>
-              )}
-            </div>
-            {translatedText && (
-              <motion.div
-                className="w-full max-w-md mt-4 p-3 rounded-lg bg-white/10 backdrop-blur-lg border border-indigo-600/30 text-gray-100 text-sm sm:text-base"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.4 }}
-              >
-                <p className="font-semibold text-indigo-300 mb-2">
-                  Translated Text{isLoading ? ' (Translating...)' : ''}
-                </p>
-                <p>{translatedText}</p>
-              </motion.div>
-            )}
-            {error && (
-              <motion.div
-                className="mt-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 max-w-md text-sm break-words"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.4 }}
-              >
-                {error}
-                <button
-                  onClick={() => setError('')}
-                  className="ml-2 text-red-300 hover:text-red-100"
-                >
-                  ✕
-                </button>
-              </motion.div>
-            )}
-            <motion.button
-              onClick={handleConvert}
-              disabled={!translatedText.trim() || isLoading || translatedText.length < 5}
-              className={`mt-6 px-6 py-3 rounded-lg text-white font-semibold ${
-                translatedText.trim() && !isLoading && translatedText.length >= 5
-                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600'
-                  : 'bg-gray-600/50 cursor-not-allowed'
-              }`}
-              whileHover={{ scale: translatedText.trim() && !isLoading && translatedText.length >= 5 ? 1.05 : 1 }}
-              whileTap={{ scale: translatedText.trim() && !isLoading && translatedText.length >= 5 ? 0.95 : 1 }}
-              transition={{ type: 'spring', stiffness: 400 }}
-            >
-              {isLoading ? (
-                <motion.div
-                  className="flex space-x-2"
-                  animate={{ opacity: [0.4, 1, 0.4] }}
-                  transition={{ repeat: Infinity, duration: 1.2 }}
-                >
-                  <div className="w-2 h-2 bg-white rounded-full"></div>
-                  <div className="w-2 h-2 bg-white rounded-full"></div>
-                  <div className="w-2 h-2 bg-white rounded-full"></div>
-                </motion.div>
-              ) : (
-                'Convert to Audio'
-              )}
-            </motion.button>
-            {audioUrl && (
-              <motion.audio
-                controls
-                src={audioUrl}
-                className="mt-6 w-full max-w-md"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.4 }}
-              />
-            )}
-          </div>
-        </motion.div>
+        {/* Translation Input */}
+        <TranslationInput onTranslate={handleTranslate} />
 
-        {/* Floating AI Assistant */}
-        <motion.div
-          className="absolute bottom-4 right-4 sm:bottom-8 sm:right-8"
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 0.8, y: 0 }}
-          transition={{ delay: 1.2, duration: 0.6, type: 'spring', stiffness: 100 }}
-        >
+        {translations.length === 0 && !isLoading ? (
           <motion.div
-            className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500/30 to-blue-500/30 backdrop-blur-md border border-indigo-400/40 shadow-xl flex items-center justify-center"
-            animate={{
-              y: [0, -6, 0],
-              rotate: [0, 3, -3, 0],
-              scale: audioUrl ? [1, 1.1, 1] : 1,
-            }}
-            whileHover={{ scale: 1.1, boxShadow: '0 0 15px rgba(139, 92, 246, 0.6)' }}
-            transition={{
-              y: { repeat: Infinity, duration: 3, ease: 'easeInOut' },
-              rotate: { repeat: Infinity, duration: 6, ease: 'easeInOut' },
-              scale: { repeat: Infinity, duration: 2, ease: 'easeInOut' },
-            }}
+            className="flex flex-col items-center justify-center h-full text-gray-400"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8, delay: 0.4, type: "spring", stiffness: 120 }}
           >
             <motion.div
-              className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center"
-              animate={{ scale: [1, 1.05, 1], rotate: [0, 360] }}
-              transition={{ scale: { repeat: Infinity, duration: 2 }, rotate: { repeat: Infinity, duration: 12, ease: 'linear' } }}
+              className="text-4xl mb-4"
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
             >
-              <motion.div
-                className="text-2xl"
-                animate={{ scale: [1, 1.2, 1], opacity: [0.8, 1, 0.8] }}
-                transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
-              >
-                🤖
-              </motion.div>
+              💬
             </motion.div>
+            <p className="text-sm sm:text-base">Translate text with VoxMate!</p>
           </motion.div>
-        </motion.div>
+        ) : (
+          <>
+            {translations.map((trans) => (
+              <MessageBubble
+                key={trans.id}
+                content={trans.content}
+                audioUrl={trans.audioUrl}
+                messageId={trans.id}
+                isPlaying={playingMessageId === trans.id}
+                onToggleAudio={handleToggleAudio}
+              />
+            ))}
+            {isLoading && (
+              <motion.div
+                className="flex justify-start mb-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: "easeOut", type: "spring", stiffness: 120 }}
+              >
+                <div
+                  className="max-w-[80%] sm:max-w-[60%] p-3 sm:p-4 rounded-xl shadow-md bg-white/10 backdrop-blur-lg border border-indigo-600/30 text-gray-100"
+                >
+                  <motion.div
+                    className="flex space-x-2"
+                    animate={{ opacity: [0.4, 1, 0.4] }}
+                    transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut" }}
+                  >
+                    <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                  </motion.div>
+                </div>
+              </motion.div>
+            )}
+          </>
+        )}
+        <div ref={translationsEndRef} />
       </motion.div>
+
+      {/* Inline CSS for Markdown */}
+      <style>{`
+        .markdown h1, .markdown h2, .markdown h3 {
+          color: #e0e7ff;
+          margin-bottom: 0.5rem;
+        }
+        .markdown p {
+          margin-bottom: 0.5rem;
+        }
+        .markdown code {
+          font-family: 'Courier New', Courier, monospace;
+        }
+        .markdown pre {
+          margin-bottom: 0.5rem;
+        }
+        .markdown ul, .markdown ol {
+          margin-left: 1.5rem;
+          margin-bottom: 0.5rem;
+        }
+      `}</style>
     </motion.div>
   );
 }

@@ -1,1 +1,1 @@
-export const BASE_URL = "https://ai-chatbot-01.onrender.com/";
+export const BASE_URL = "https://ai-chatbot-qg4j.onrender.com";

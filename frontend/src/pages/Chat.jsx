@@ -29,13 +29,37 @@ class ErrorBoundary extends React.Component {
 // MessageBubble Component
 const MessageBubble = ({ role, content, isTyping, audioUrl, messageId, isPlaying, onToggleAudio }) => {
   const isUser = role === "user";
+  console.debug(`MessageBubble: messageId=${messageId}, role=${role}, audioUrl=${audioUrl}, isPlaying=${isPlaying}`);
+
   return (
     <motion.div
-      className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}
+      className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4 items-start`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: "easeOut", type: "spring", stiffness: 120 }}
     >
+      {!isUser && audioUrl && (
+        <motion.button
+          onClick={() => onToggleAudio(messageId, audioUrl)}
+          className={`p-2 rounded-full mr-2 mt-3 ${
+            isPlaying
+              ? "bg-gradient-to-r from-red-600 to-pink-600"
+              : "bg-gray-800/50 border border-indigo-500/30"
+          }`}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          transition={{ type: "spring", stiffness: 400 }}
+          aria-label={isPlaying ? "Stop audio" : "Play audio"}
+        >
+          <motion.span
+            className="text-lg"
+            animate={isPlaying ? { scale: [1, 1.2, 1] } : { scale: 1 }}
+            transition={{ repeat: isPlaying ? Infinity : 0, duration: 1, ease: "easeInOut" }}
+          >
+            {isPlaying ? "⏸️" : "🎙️"}
+          </motion.span>
+        </motion.button>
+      )}
       <div
         className={`max-w-[80%] sm:max-w-[60%] p-3 sm:p-4 rounded-xl shadow-md ${
           isUser
@@ -54,53 +78,29 @@ const MessageBubble = ({ role, content, isTyping, audioUrl, messageId, isPlaying
             <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
           </motion.div>
         ) : (
-          <>
-            <ErrorBoundary>
-              <div className="text-sm sm:text-base markdown prose prose-invert">
-                <ReactMarkdown
-                  components={{
-                    code({ inline, className, children, ...props }) {
-                      return inline ? (
-                        <code className="bg-gray-700/50 px-1 rounded" {...props}>
+          <ErrorBoundary>
+            <div className="text-sm sm:text-base markdown prose prose-invert">
+              <ReactMarkdown
+                components={{
+                  code({ inline, className, children, ...props }) {
+                    return inline ? (
+                      <code className="bg-gray-700/50 px-1 rounded" {...props}>
+                        {children}
+                      </code>
+                    ) : (
+                      <pre className="bg-gray-700/50 p-3 rounded-lg overflow-auto">
+                        <code className={className} {...props}>
                           {children}
                         </code>
-                      ) : (
-                        <pre className="bg-gray-700/50 p-3 rounded-lg overflow-auto">
-                          <code className={className} {...props}>
-                            {children}
-                          </code>
-                        </pre>
-                      );
-                    },
-                  }}
-                >
-                  {content}
-                </ReactMarkdown>
-              </div>
-            </ErrorBoundary>
-            {audioUrl && !isUser && (
-              <motion.button
-                onClick={() => onToggleAudio(messageId, audioUrl)}
-                className={`mt-2 p-2 rounded-full ${
-                  isPlaying
-                    ? "bg-gradient-to-r from-red-600 to-pink-600"
-                    : "bg-gray-800/50 border border-indigo-500/30"
-                }`}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                transition={{ type: "spring", stiffness: 400 }}
-                aria-label={isPlaying ? "Stop audio" : "Play audio"}
+                      </pre>
+                    );
+                  },
+                }}
               >
-                <motion.span
-                  className="text-lg"
-                  animate={isPlaying ? { scale: [1, 1.2, 1] } : { scale: 1 }}
-                  transition={{ repeat: isPlaying ? Infinity : 0, duration: 1, ease: "easeInOut" }}
-                >
-                  🎙️
-                </motion.span>
-              </motion.button>
-            )}
-          </>
+                {content}
+              </ReactMarkdown>
+            </div>
+          </ErrorBoundary>
         )}
       </div>
     </motion.div>
@@ -306,6 +306,7 @@ export default function Chat() {
 
   // Handle audio playback
   const handleToggleAudio = (messageId, audioUrl) => {
+    console.log(`Toggling audio: messageId=${messageId}, audioUrl=${audioUrl}`);
     if (playingMessageId === messageId && playingAudio) {
       // Stop current audio
       playingAudio.pause();
@@ -320,7 +321,7 @@ export default function Chat() {
         playingAudio.currentTime = 0;
       }
       // Play new audio
-      const audio = new Audio(`${BASE_URL}${audioUrl}`);
+      const audio = new Audio(audioUrl);
       audio.play().catch((err) => {
         console.error("Audio playback error:", err);
         setMessages((prev) => [
@@ -334,7 +335,7 @@ export default function Chat() {
       });
       setPlayingAudio(audio);
       setPlayingMessageId(messageId);
-      console.log("Playing audio for message:", messageId, audioUrl);
+      console.log("Playing audio for message:", messageId);
 
       // Reset when audio ends
       audio.onended = () => {
@@ -517,43 +518,6 @@ export default function Chat() {
         />
       ))}
 
-      {/* Floating AI Assistant */}
-      <motion.div
-        className="absolute bottom-32 right-4 sm:bottom-36 sm:right-8"
-        initial={{ opacity: 0, y: 50 }}
-        animate={{ opacity: 0.8, y: 0 }}
-        transition={{ delay: 0.8, duration: 0.6, type: "spring", stiffness: 100 }}
-      >
-        <motion.div
-          className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500/30 to-blue-500/30 backdrop-blur-md border border-indigo-400/40 shadow-xl flex items-center justify-center"
-          animate={{
-            y: [0, -6, 0],
-            rotate: [0, 3, -3, 0],
-            scale: messages.length > 0 ? [1, 1.1, 1] : 1,
-          }}
-          whileHover={{ scale: 1.1, boxShadow: "0 0 15px rgba(139, 92, 246, 0.6)" }}
-          transition={{
-            y: { repeat: Infinity, duration: 3, ease: "easeInOut" },
-            rotate: { repeat: Infinity, duration: 6, ease: "easeInOut" },
-            scale: { repeat: Infinity, duration: 2, ease: "easeInOut" },
-          }}
-        >
-          <motion.div
-            className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center"
-            animate={{ scale: [1, 1.05, 1], rotate: [0, 360] }}
-            transition={{ scale: { repeat: Infinity, duration: 2 }, rotate: { repeat: Infinity, duration: 12, ease: "linear" } }}
-          >
-            <motion.div
-              className="text-2xl"
-              animate={{ scale: [1, 1.2, 1], opacity: [0.8, 1, 0.8] }}
-              transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-            >
-              🤖
-            </motion.div>
-          </motion.div>
-        </motion.div>
-      </motion.div>
-
       {/* Chat Area */}
       <motion.div
         className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-transparent relative z-10 pb-20 sm:pb-24"
@@ -600,7 +564,7 @@ export default function Chat() {
             >
               💬
             </motion.div>
-            <p className="text-sm sm:text-base">Start a conversation with Nested Minds!</p>
+            <p className="text-sm sm:text-base">Start a conversation with VoxMate!</p>
           </motion.div>
         ) : (
           <>

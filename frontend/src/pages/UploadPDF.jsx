@@ -28,7 +28,7 @@ class ErrorBoundary extends React.Component {
 
 export default function UploadPDF() {
   const [file, setFile] = useState(null);
-  const [prompt, setPrompt] = useState("Summarize the document in a few sentences.");
+  const [prompt, setPrompt] = useState("");
   const [summaryText, setSummaryText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -415,43 +415,6 @@ export default function UploadPDF() {
             </ErrorBoundary>
           </motion.div>
         )}
-
-        {/* Floating AI Assistant */}
-        <motion.div
-          className="absolute bottom-4 right-4 sm:bottom-8 sm:right-8"
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 0.8, y: 0 }}
-          transition={{ delay: 1.2, duration: 0.6, type: "spring", stiffness: 100 }}
-        >
-          <motion.div
-            className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500/30 to-blue-500/30 backdrop-blur-md border border-indigo-400/40 shadow-xl flex items-center justify-center"
-            animate={{
-              y: [0, -6, 0],
-              rotate: [0, 3, -3, 0],
-              scale: summaryText ? [1, 1.1, 1] : 1,
-            }}
-            whileHover={{ scale: 1.1, boxShadow: "0 0 15px rgba(139, 92, 246, 0.6)" }}
-            transition={{
-              y: { repeat: Infinity, duration: 3, ease: "easeInOut" },
-              rotate: { repeat: Infinity, duration: 6, ease: "easeInOut" },
-              scale: { repeat: Infinity, duration: 2, ease: "easeInOut" },
-            }}
-          >
-            <motion.div
-              className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center"
-              animate={{ scale: [1, 1.05, 1], rotate: [0, 360] }}
-              transition={{ scale: { repeat: Infinity, duration: 2 }, rotate: { repeat: Infinity, duration: 12, ease: "linear" } }}
-            >
-              <motion.div
-                className="text-2xl"
-                animate={{ scale: [1, 1.2, 1], opacity: [0.8, 1, 0.8] }}
-                transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-              >
-                🤖
-              </motion.div>
-            </motion.div>
-          </motion.div>
-        </motion.div>
 
         {/* Inline CSS for Markdown */}
         <style>{`

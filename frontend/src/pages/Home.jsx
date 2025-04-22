@@ -1,10 +1,12 @@
 import { motion } from 'framer-motion';
 import { useState, useMemo, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 
 export default function Home() {
   const [hoveredButton, setHoveredButton] = useState(null);
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isChatbotHovered, setIsChatbotHovered] = useState(false);
 
   // Set isLoaded to true after component mounts
   useEffect(() => {
@@ -44,7 +46,7 @@ export default function Home() {
             animate={{ scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] }}
             transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
           >
-            Team Nested Minds
+            Team VoxMate
           </motion.h1>
         </motion.div>
       )}
@@ -92,29 +94,6 @@ export default function Home() {
           />
         ))}
 
-        {/* Floating Tech Logos */}
-        <motion.div 
-          className="absolute top-4 right-4 sm:top-8 sm:right-8 flex gap-3 z-10"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 0.9, y: 0 }}
-          transition={{ delay: 1.2 }}
-        >
-          <motion.div
-            className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-lg flex items-center justify-center border border-indigo-400/40 shadow-lg"
-            whileHover={{ scale: 1.2, rotate: 5, boxShadow: '0 0 15px rgba(139, 92, 246, 0.6)' }}
-            transition={{ type: 'spring', stiffness: 500 }}
-          >
-            <span className="text-xs font-bold bg-gradient-to-r from-indigo-400 to-blue-400 bg-clip-text text-transparent">GROQ</span>
-          </motion.div>
-          <motion.div
-            className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-lg flex items-center justify-center border border-blue-400/40 shadow-lg"
-            whileHover={{ scale: 1.2, rotate: -5, boxShadow: '0 0 15px rgba(59, 130, 246, 0.6)' }}
-            transition={{ type: 'spring', stiffness: 500 }}
-          >
-            <span className="text-xs font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">EDGE</span>
-          </motion.div>
-        </motion.div>
-
         {/* Main Content Container */}
         <div className="relative z-10 w-full max-w-5xl flex flex-col items-center">
           {/* Animated Header */}
@@ -140,7 +119,7 @@ export default function Home() {
                   duration: 1.2
                 }}
               >
-                Nested Minds
+                VoxMate
               </h1>
               <motion.div
                 className="absolute -bottom-1 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-full"
@@ -249,7 +228,7 @@ export default function Home() {
                   <span className="text-2xl">🚀</span>
                 </motion.div>
                 <div>
-                  <h3 className="text-xl font-semibold text-white">Nested Minds Solution</h3>
+                  <h3 className="text-xl font-semibold text-white">VoxMate Solution</h3>
                   <p className="text-indigo-200 text-sm">Redefining AI interaction</p>
                 </div>
               </div>
@@ -294,15 +273,18 @@ export default function Home() {
               animate={{ height: '100%' }}
               transition={{ delay: 2, duration: 1.2, ease: 'easeInOut' }}
             />
-            <motion.div
-              className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-lg"
-              animate={{ scale: [1, 1.2, 1], backgroundColor: ['#fff', '#8b5cf6', '#fff'] }}
-              transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut', delay: 2.2 }}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-600" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </motion.div>
+            <Link to="/login">
+              <motion.div
+                className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-lg cursor-pointer"
+                animate={{ scale: [1, 1.2, 1], backgroundColor: ['#fff', '#8b5cf6', '#fff'] }}
+                whileHover={{ scale: 1.3, boxShadow: '0 0 15px rgba(139, 92, 246, 0.6)' }}
+                transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut', delay: 2.2 }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-600" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </motion.div>
+            </Link>
           </motion.div>
 
           {/* Action Buttons */}
@@ -414,13 +396,15 @@ export default function Home() {
 
           {/* Floating AI Assistant */}
           <motion.div
-            className="absolute -bottom-16 right-0 sm:-bottom-20 sm:right-4"
+            className="absolute bottom-4 right-0 sm:bottom-8 sm:right-4"
             initial={{ opacity: 0, y: 80 }}
             animate={{ opacity: 0.9, y: 0 }}
             transition={{ delay: 2.8, duration: 0.8 }}
+            onHoverStart={() => setIsChatbotHovered(true)}
+            onHoverEnd={() => setIsChatbotHovered(false)}
           >
             <motion.div
-              className="w-32 h-32 rounded-full bg-gradient-to-br from-indigo-500/30 to-blue-500/30 backdrop-blur-md border border-indigo-400/40 shadow-xl flex items-center justify-center"
+              className="relative w-32 h-32 rounded-full bg-gradient-to-br from-indigo-500/30 to-blue-500/30 backdrop-blur-md border border-indigo-400/40 shadow-xl flex items-center justify-center"
               animate={{ y: [0, -8, 0], rotate: [0, 4, -4, 0] }}
               whileHover={{ scale: 1.1, boxShadow: '0 0 20px rgba(139, 92, 246, 0.6)' }}
               transition={{ 
@@ -442,35 +426,47 @@ export default function Home() {
                   🤖
                 </motion.div>
               </motion.div>
+              {/* Hover Text */}
+              {isChatbotHovered && (
+                <motion.div
+                  className="absolute bottom-36 right-0 bg-gradient-to-r from-indigo-600/80 to-blue-600/80 backdrop-blur-lg text-white text-sm font-medium rounded-lg p-3 shadow-lg border border-indigo-400/40"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
+                  transition={{ duration: 0.3, ease: 'easeOut' }}
+                >
+                  Welcome to VoxMate, I am your AI Chat Assistant!
+                </motion.div>
+              )}
             </motion.div>
           </motion.div>
-        </div>
 
-        {/* Footer */}
-        <motion.div
-          className="w-full py-5 text-center mt-auto"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 3.2, duration: 0.5 }}
-        >
-          <div className="flex flex-col items-center">
-            <motion.p
-              className="text-gray-300 text-xs sm:text-sm mb-1"
-              animate={{ textShadow: ['0 0 0 rgba(255,255,255,0)', '0 0 8px rgba(255,255,255,0.1)', '0 0 0 rgba(255,255,255,0)'] }}
-              transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
-            >
-              Advanced AI Interaction Platform
-            </motion.p>
-            <div className="flex items-center justify-center gap-1">
-              <motion.div
-                className="w-1.5 h-1.5 rounded-full bg-indigo-400"
-                animate={{ scale: [1, 1.4, 1], opacity: [0.6, 1, 0.6] }}
-                transition={{ repeat: Infinity, duration: 1.8, ease: 'easeInOut' }}
-              />
-              <p className="text-gray-400 text-xs">Powered by Groq</p>
+          {/* Footer */}
+          <motion.div
+            className="w-full py-5 text-center mt-auto"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 3.2, duration: 0.5 }}
+          >
+            <div className="flex flex-col items-center">
+              <motion.p
+                className="text-gray-300 text-xs sm:text-sm mb-1"
+                animate={{ textShadow: ['0 0 0 rgba(255,255,255,0)', '0 0 8px rgba(255,255,255,0.1)', '0 0 0 rgba(255,255,255,0)'] }}
+                transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
+              >
+                Advanced AI Interaction Platform
+              </motion.p>
+              <div className="flex items-center justify-center gap-1">
+                <motion.div
+                  className="w-1.5 h-1.5 rounded-full bg-indigo-400"
+                  animate={{ scale: [1, 1.4, 1], opacity: [0.6, 1, 0.6] }}
+                  transition={{ repeat: Infinity, duration: 1.8, ease: 'easeInOut' }}
+                />
+                <p className="text-gray-400 text-xs">Powered by Groq</p>
+              </div>
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
       </motion.div>
     </motion.div>
   );

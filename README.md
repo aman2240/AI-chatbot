@@ -1,60 +1,51 @@
-# 🚀 Multilingual Chatbot
+# 🚀 Voxmate: Multilingual AI Assistant
 
-An advanced FastAPI backend that integrates:
-- 💬 **Conversational AI** using Groq's LLaMA models  
-- 🧾 **PDF text extraction** via PyMuPDF  
-- 🧠 **Image-based queries** with base64-encoded image prompts  
-- 🗣️ **Text-to-Speech (TTS)** powered by Microsoft Edge TTS  
-- 📁 **Session management** for multi-user, multi-conversation support
+Voxmate is a cutting-edge multilingual AI assistant designed to process and respond to user queries in text, audio, and images. Powered by advanced AI models and a robust backend architecture, it ensures seamless user interaction and accessibility.
+
+## 🌟 Project Highlights
+
+- **Conversational AI**: Context-aware conversations using Groq's LLaMA models.
+- **PDF Processing**: Extract text from PDF files with PyMuPDF.
+- **Image Queries**: Interpret and respond to image-based prompts.
+- **Multilingual TTS**: Generate natural-sounding audio responses in multiple languages.
+- **Session Management**: Multi-user, multi-session support for enhanced user experience.
 
 ---
 
-## 📦 Features
+## 🛠️ Tech Stack
 
-- 🧠 **Conversational AI** with context-aware chat sessions (`LLaMA 4 Scout 17B`)
-- 📄 **Upload PDF** files and extract readable text content
-- 🖼️ **Image Search**: Upload images with text prompts for visual question answering
-- 🔊 **Text-to-Speech** with multilingual support (`en`, `hi`, `fr`, `es`)
-- 🧪 In-memory **session storage** (great for testing and prototyping)
+- **FastAPI**: Backend API development.
+- **Groq LLaMA 4**: Conversational AI.
+- **PyMuPDF**: PDF text extraction.
+- **Edge TTS**: Text-to-speech conversion.
+- **Tesseract OCR**: Image text recognition.
+- **Base64 Encoding**: Secure image embedding.
 
 ---
 
 ## 🚀 Getting Started
 
-### 📁 Clone the repository
+### Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/hackhazards-ai-api.git
-cd hackhazards-ai-api
+git clone https://github.com/aman2240/AI-chatbot.git
+cd AI-chatbot
 ```
 
-### ⚙️ Install dependencies
+### Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Or install manually:
+Ensure `poppler` and `Tesseract OCR` are installed:
+- **macOS**: `brew install poppler tesseract`
+- **Ubuntu**: `sudo apt-get install poppler-utils tesseract-ocr`
+- **Windows**: [Poppler for Windows](http://blog.alivate.com.au/poppler-windows/) | [Tesseract for Windows](https://github.com/tesseract-ocr/tesseract/wiki)
 
-```bash
-pip install fastapi uvicorn python-dotenv groq edge-tts langdetect python-multipart pdf2image pytesseract Pillow fitz
-```
+### Set Environment Variables
 
-> Make sure `poppler` is installed for `pdf2image`:  
-> - macOS: `brew install poppler`  
-> - Ubuntu: `sudo apt-get install poppler-utils`  
-> - Windows: [Download Poppler for Windows](http://blog.alivate.com.au/poppler-windows/)
-
-Also, ensure **Tesseract** OCR is installed for image text recognition:
-- macOS: `brew install tesseract`
-- Ubuntu: `sudo apt install tesseract-ocr`
-- Windows: [Tesseract for Windows](https://github.com/tesseract-ocr/tesseract/wiki)
-
----
-
-## 🧪 Environment Variables
-
-Create a `.env` file in the root:
+Create a `.env` file:
 
 ```env
 GROQ_API_KEY=your_groq_api_key_here
@@ -62,123 +53,67 @@ GROQ_API_KEY=your_groq_api_key_here
 
 ---
 
-## ▶️ Run the Server
+## ▶️ Running the Application
+
+Start the server:
 
 ```bash
 uvicorn app:app --reload
 ```
 
-Server will run at:  
-📍 `http://127.0.0.1:8000`
+Access at: [http://127.0.0.1:8000](http://127.0.0.1:8000)
 
 ---
 
 ## 🔌 API Endpoints
 
-### `/`  
-**GET** - Root route  
-Returns a friendly API status message.
+### `/chat/`
+- **POST**: AI chat with session tracking.
+- **Input**: User message, role, conversation ID, user ID.
+- **Output**: AI response, detected language, audio URL.
+
+### `/upload-pdf/`
+- **POST**: Upload PDF and extract text.
+- **Input**: PDF file, user ID, conversation ID, optional prompt.
+- **Output**: Extracted text.
+
+### `/image-search/`
+- **POST**: Query with an image and text.
+- **Input**: Image file, prompt, user ID, conversation ID.
+- **Output**: AI-generated response.
+
+### `/text-to-speech/`
+- **POST**: Convert text to speech.
+- **Input**: Text, language.
+- **Output**: TTS audio URL.
 
 ---
 
-### `/chat/`  
-**POST** - AI chat with session tracking
+## 🎥 Demo
 
-**Body** (`application/json`):
-
-```json
-{
-  "message": "Hello, how are you?",
-  "role": "user",
-  "conversation_id": "abc123",
-  "user_id": "user001"
-}
-```
-
-**Returns**:
-- `response`: AI response
-- `language`: Detected language
-- `audio_url`: TTS audio file
-- `conversation_id`: Echo of provided ID
+Visit the live demo: [Voxmate Demo](https://startling-bavarois-edfb33.netlify.app/)
 
 ---
 
-### `/upload-pdf/`  
-**POST** - Upload a PDF and extract its text
+## 🔍 Challenges Faced
 
-**Form Data**:
-- `file`: PDF file
-- `user_id`: Unique user identifier
-- `conversation_id`: Session ID
-- `prompt`: Prompt (optional)
-
-**Returns**:
-- `extracted_text`: All readable text extracted from PDF
+- **Model Integration**: Efficiently integrating Groq's LLaMA model for real-time interaction.
+- **Multilingual TTS**: Achieving natural and accurate audio outputs.
+- **Session Management**: Maintaining context across user sessions.
+- **Voice Input**: Implementing seamless voice-to-text conversion for user input.
+- **OCR Processing**: Handling input from PDFs and JPGs using OCR for accurate text extraction.
 
 ---
 
-### `/image-search/`  
-**POST** - Send image + message for image-based question answering
+## 📄 Future Enhancements
 
-**Form Data**:
-- `file`: Image file
-- `message`: Prompt
-- `user_id`: Your user ID
-- `conversation_id`: Session ID
-
-**Returns**:
-- `response`: AI answer
-- `audio_url`: TTS URL of the answer
+- Persistent database for session management.
+- User authentication and authorization.
+- Advanced image understanding and PDF summarization.
+- Multinlingual Home Page
 
 ---
 
-### `/text-to-speech/`  
-**POST** - Convert text to speech
+## 📜 License
 
-**Params**:
-- `text`: String to convert
-- `language`: Optional (`en`, `hi`, `fr`, `es`)
-
-**Returns**:
-- `audio_url`: URL to the generated `.mp3` file
-
----
-
-## 📁 Audio File Hosting
-
-TTS output is saved in `/audio` and accessible via:
-
-```
-http://127.0.0.1:8000/audio/your_audio.mp3
-```
-
----
-
-## 🛠 Tech Stack
-
-- **FastAPI** - Web API framework
-- **Groq LLaMA 4** - Conversational AI
-- **Edge TTS** - Natural-sounding speech synthesis
-- **PyMuPDF / pdf2image** - PDF text/image parsing
-- **Tesseract OCR** - Optical Character Recognition
-- **Base64 image embedding** - For image-based queries
-
----
-
-## 📌 To-Do
-
-- [ ] Persistent DB for chat sessions
-- [ ] User authentication
-- [ ] Frontend interface (React or Next.js)
-- [ ] PDF summarization
-- [ ] OCR fallback for scanned PDFs
-
----
-
-## 📄 License
-
-MIT © HackHazards Team
-
----
-
-Let me know if you want this turned into a real GitHub repo structure with files and folders!
+MIT License © Nested Minds Team
