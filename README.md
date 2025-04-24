@@ -1,27 +1,96 @@
 # 🚀 Voxmate: Multilingual AI Assistant
 
-Voxmate is a cutting-edge multilingual AI assistant designed to process and respond to user queries in text, audio, and images. Powered by advanced AI models and a robust backend architecture, it ensures seamless user interaction and accessibility.
+> A cutting-edge multilingual AI assistant designed to process and respond to user queries in text, audio, and images.
 
-## 🌟 Project Highlights
+---
 
-- **Conversational AI**: Context-aware conversations using Groq's LLaMA models.
-- **PDF Processing**: Extract text from PDF files with PyMuPDF.
-- **Image Queries**: Interpret and respond to image-based prompts.
-- **Multilingual TTS**: Generate natural-sounding audio responses in multiple languages.
-- **Session Management**: Multi-user, multi-session support for enhanced user experience.
+## 📌 Problem Statement
+
+**Problem Statement 1 – Weave AI magic with Groq**
+
+---
+
+## 🎯 Objective
+
+Voxmate addresses the challenge of providing real-time multilingual AI assistance, ensuring accessibility and seamless interaction for diverse users. This project serves individuals and organizations needing versatile communication tools for text, audio, and image-based queries.
+
+---
+
+## 🧠 Team & Approach
+
+### Team Name:
+
+`Nested Minds`
+
+### Team Members:
+
+- **Kavi Sharma** ([GitHub](https://github.com/Kavi-Sharma08) / [LinkedIn](https://www.linkedin.com/in/kavi-sharma-29b487294)) – Contributed in making the frontend of VoxMate.
+- **Aryan Shrivastav** ([GitHub](https://github.com/aryanSE7374/) / [LinkedIn](https://www.linkedin.com/in/aryanshri0611/)) – Contributed in making the frontend of VoxMate and miscellaneous tasks.
+- **Aman Kumar** ([GitHub](https://github.com/aman2240) / [LinkedIn](https://www.linkedin.com/in/aman-kumar-1417b7291)) – Contributed in making the backend of VoxMate.
+
+- **Krishna Tyagi** ([GitHub](https://github.com/knight22-21) / [LinkedIn](https://www.linkedin.com/in/krishna-tyagi-/)) – Helped in the making of backend of AI chatbot.
+
+### Your Approach:
+
+- Chose this problem to enhance rural accessibility and multilingual communication.
+- Key challenges addressed: real-time multilingual TTS, OCR, and session management.
+- Iterated through multiple brainstorming sessions to integrate advanced features like PDF and image processing seamlessly.
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **FastAPI**: Backend API development.
-- **Groq LLaMA 4**: Conversational AI.
-- **PyMuPDF**: PDF text extraction.
-- **Edge TTS**: Text-to-speech conversion.
-- **Tesseract OCR**: Image text recognition.
-- **Base64 Encoding**: Secure image embedding.
+### Core Technologies Used:
+
+- **Frontend**: React.js
+- **Backend**: FastAPI
+- **Database**: MongoDB (future integration planned)
+- **APIs**: Custom-built for multilingual processing
+- **Hosting**: Netlify, Render
+
+### Partner Technology Used:
+
+- [☑️] **Groq**: Integrated Groq LLaMA 4 for conversational AI.
+
+### Additional Tools & Libraries:
+
+- **Tesseract OCR**: Implemented for accurate text extraction from images.
+- **Edge TTS**: Used for multilingual text-to-speech conversion.
+- **PyMuPDF**: For text extraction from PDF files.
 
 ---
+
+## ✨ Key Features
+
+- ☑️ Context-aware conversations with Groq’s LLaMA models.
+- ☑️ Text extraction from PDF files using PyMuPDF.
+- ☑️ Multilingual natural-sounding TTS responses.
+- ☑️ Image-based query interpretation.
+
+---
+
+## 📷 Demo & Deliverables
+
+- **Demo Video Link**: [Voxmate Demo](https://drive.google.com/file/d/1UEJA3tdg3nHgqFlfwOMC-9wBO88p2xyR/view?usp=sharing)
+- **Pitch Deck / PPT Link**: [Pitch Deck](https://docs.google.com/presentation/d/1yZWnl0_x0H5FdOWA9lVA-DT2gaAtWCLZ/edit?usp=sharing\&ouid=104654778268801210397\&rtpof=true\&sd=true)
+
+---
+
+## ✅ Tasks & Bonus Checklist
+
+- [☑️] All members of the team completed the mandatory task – Followed at least 2 of our social channels and filled the form.
+- [☑️] Completed Bonus Task 1 – Sharing of Badges (2 points).
+- [☑️] Completed Bonus Task 2 – Signing up for Sprint.dev (3 points).
+
+---
+
+## 🧪 How to Run the Project
+
+### Requirements:
+
+- Python 3.8+
+- `poppler` and `Tesseract OCR`
+- `.env` file with API keys
 
 ## 🚀 Getting Started
 
@@ -39,6 +108,7 @@ pip install -r requirements.txt
 ```
 
 Ensure `poppler` and `Tesseract OCR` are installed:
+
 - **macOS**: `brew install poppler tesseract`
 - **Ubuntu**: `sudo apt-get install poppler-utils tesseract-ocr`
 - **Windows**: [Poppler for Windows](http://blog.alivate.com.au/poppler-windows/) | [Tesseract for Windows](https://github.com/tesseract-ocr/tesseract/wiki)
@@ -65,55 +135,39 @@ Access at: [http://127.0.0.1:8000](http://127.0.0.1:8000)
 
 ---
 
-## 🔌 API Endpoints
+## 🚒 Challenges Faced
 
-### `/chat/`
-- **POST**: AI chat with session tracking.
-- **Input**: User message, role, conversation ID, user ID.
-- **Output**: AI response, detected language, audio URL.
-
-### `/upload-pdf/`
-- **POST**: Upload PDF and extract text.
-- **Input**: PDF file, user ID, conversation ID, optional prompt.
-- **Output**: Extracted text.
-
-### `/image-search/`
-- **POST**: Query with an image and text.
-- **Input**: Image file, prompt, user ID, conversation ID.
-- **Output**: AI-generated response.
-
-### `/text-to-speech/`
-- **POST**: Convert text to speech.
-- **Input**: Text, language.
-- **Output**: TTS audio URL.
+- **Integration Issues**: Synchronizing Groq’s LLaMA with our FastAPI backend was complex, requiring multiple iterations to optimize performance.
+- **Multilingual TTS**: Ensuring accurate and natural-sounding text-to-speech for diverse languages posed significant challenges.
+- **OCR and PDF Processing**: Implementing robust OCR for diverse document formats required extensive testing and adjustments.
+- **Team Collaboration**: Coordinating tasks across team members with different roles and expertise demanded effective communication and task management.
 
 ---
 
-## 🎥 Demo
-
-Visit the live demo: [Voxmate Demo](https://startling-bavarois-edfb33.netlify.app/)
-
----
-
-## 🔍 Challenges Faced
-
-- **Model Integration**: Efficiently integrating Groq's LLaMA model for real-time interaction.
-- **Multilingual TTS**: Achieving natural and accurate audio outputs.
-- **Session Management**: Maintaining context across user sessions.
-- **Voice Input**: Implementing seamless voice-to-text conversion for user input.
-- **OCR Processing**: Handling input from PDFs and JPGs using OCR for accurate text extraction.
-
----
-
-## 📄 Future Enhancements
+## 🧬 Future Scope
 
 - Persistent database for session management.
 - User authentication and authorization.
 - Advanced image understanding and PDF summarization.
-- Multinlingual Home Page
+- Multilingual homepage for broader accessibility.
 
 ---
 
-## 📜 License
+## 📎 Resources / Credits
+
+- **APIs**: Groq, Edge TTS, Tesseract OCR
+- **Libraries**: FastAPI, PyMuPDF
+- **Acknowledgements**: Hackathon organizers and mentors for guidance.
+
+---
+
+## 🏁 Final Words
+
+Participating in this hackathon was an enriching experience. Overcoming challenges like model integration and session management was rewarding, and the teamwork made it all worthwhile. Special thanks to the mentors and organizers for their support!
+
+---
+
+## 💎 License
 
 MIT License © Nested Minds Team
+
